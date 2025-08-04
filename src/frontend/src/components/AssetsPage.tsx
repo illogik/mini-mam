@@ -13,6 +13,7 @@ interface AssetFormProps {
     description: string;
     type: string;
     url: string;
+    file_id?: number;
   };
   setFormData: (data: any) => void;
   selectedFile: File | null;
@@ -77,11 +78,16 @@ const AssetForm: React.FC<AssetFormProps> = ({
               id="file"
               onChange={handleFileSelect}
               accept="*/*"
-              required={!selectedFile}
+              required={!selectedFile && !title.includes('Edit')}
             />
             {selectedFile && (
               <div className="selected-file">
                 Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+              </div>
+            )}
+            {title.includes('Edit') && !selectedFile && (
+              <div className="file-info">
+                Current file will be preserved. Select a new file to replace it.
               </div>
             )}
           </div>
@@ -113,7 +119,8 @@ const AssetsPage: React.FC = () => {
     name: '',
     description: '',
     type: '',
-    url: ''
+    url: '',
+    file_id: undefined as number | undefined
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -171,7 +178,7 @@ const AssetsPage: React.FC = () => {
       
       await AssetsService.createAsset(assetData);
       setShowCreateForm(false);
-      setFormData({ name: '', description: '', type: '', url: '' });
+      setFormData({ name: '', description: '', type: '', url: '', file_id: undefined });
       setSelectedFile(null);
       loadAssets();
     } catch (err) {
@@ -187,14 +194,32 @@ const AssetsPage: React.FC = () => {
     
     if (!editingAsset) return;
 
+    setUploading(true);
+    setError(null);
+
     try {
-      await AssetsService.updateAsset(editingAsset.id, formData);
+      let updatedAssetData = { ...formData };
+
+      // If a new file is selected, upload it first
+      if (selectedFile) {
+        const uploadedFile = await FilesService.uploadFile(selectedFile);
+        updatedAssetData = {
+          ...updatedAssetData,
+          file_id: uploadedFile.id,
+          url: uploadedFile.original_filename
+        };
+      }
+
+      await AssetsService.updateAsset(editingAsset.id, updatedAssetData);
       setEditingAsset(null);
-      setFormData({ name: '', description: '', type: '', url: '' });
+      setFormData({ name: '', description: '', type: '', url: '', file_id: undefined });
+      setSelectedFile(null);
       loadAssets();
     } catch (err) {
       setError('Failed to update asset. Please try again.');
       console.error('Update asset error:', err);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -254,13 +279,14 @@ const AssetsPage: React.FC = () => {
       name: asset.name,
       description: asset.description || '',
       type: asset.type,
-      url: asset.url
+      url: asset.url,
+      file_id: asset.file_id
     });
   };
 
   const cancelEdit = () => {
     setEditingAsset(null);
-    setFormData({ name: '', description: '', type: '', url: '' });
+    setFormData({ name: '', description: '', type: '', url: '', file_id: undefined });
     setSelectedFile(null);
   };
 
