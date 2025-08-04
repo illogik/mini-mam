@@ -95,7 +95,6 @@ services:
       - SECRET_KEY=your-secret-key-here
     depends_on:
       - postgres
-      - elasticsearch
     networks:
       - microservices-network
 
@@ -124,19 +123,7 @@ services:
     networks:
       - microservices-network
 
-  # Elasticsearch for advanced search
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
-    networks:
-      - microservices-network
+
 
 
 
@@ -174,7 +161,6 @@ services:
 volumes:
   postgres-data:
   redis-data:
-  elasticsearch-data:
   file-uploads:
   transcode-output:
   transcode-temp:

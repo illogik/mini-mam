@@ -23,8 +23,7 @@ ffmpeg-python==0.2.0
 boto3==1.34.0
 
 # Search functionality
-elasticsearch==8.9.0
-elasticsearch-dsl==8.9.0
+
 
 # HTTP client for inter-service communication
 requests==2.31.0

@@ -224,7 +224,7 @@ def get_suggestions():
             return jsonify(create_response(data=[]))
         
         # Simple suggestion implementation
-        # In production, you'd want to use a proper search engine like Elasticsearch
+        # For production, consider using a dedicated search engine for better performance
         suggestions = []
         
         # Get recent searches or popular terms
