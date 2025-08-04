@@ -113,15 +113,7 @@ services:
     networks:
       - microservices-network
 
-  # Redis for caching and session management
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - microservices-network
+
 
 
 
@@ -160,7 +152,6 @@ services:
 
 volumes:
   postgres-data:
-  redis-data:
   file-uploads:
   transcode-output:
   transcode-temp:

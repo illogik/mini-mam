@@ -131,7 +131,6 @@ Each service exposes RESTful APIs with comprehensive documentation available at:
 ### Prerequisites
 - Python 3.8+
 - Docker and Docker Compose
-- Redis (for caching and session management)
 - PostgreSQL (for data persistence)
 - **AWS S3 bucket** (or other S3-compatible storage service)
 
