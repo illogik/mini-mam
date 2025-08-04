@@ -2,6 +2,8 @@
 
 A small demo Media Asset Management service  built with Flask, featuring assets, files, transcode, and search microservices and a react frontend.
 
+This project was created using [Cursor](https://cursor.com/)
+
 ## Architecture
 
 - **Frontend**: React application served from root path
@@ -56,7 +58,7 @@ pip install -r requirements.txt
 docker-compose up
 ```
 
-**Or** set up S3 storage manually:
+Set up S3 storage manually:
    - **AWS S3**: Create an S3 bucket and configure AWS credentials
    - **Other S3-compatible services**: Configure your preferred S3-compatible storage
 
@@ -136,7 +138,7 @@ Each service exposes RESTful APIs with comprehensive documentation available at:
 
 ### Project Structure
 ```
-flask-microservices/
+mini-mam/
 ├── src/                 # Source code directory
 │   ├── frontend/        # React application
 │   ├── api-gateway/     # API Gateway service
@@ -165,15 +167,10 @@ flask-microservices/
 
 Run tests for all services:
 ```bash
-pytest tests/
+python test_framework.py
 ```
 
-## Deployment
 
-The framework includes Docker configurations for easy deployment:
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
 
 ## Contributing
 
