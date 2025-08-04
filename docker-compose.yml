@@ -1,0 +1,184 @@
+
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/api-gateway.Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_ENV=development
+      - ASSETS_SERVICE_URL=http://assets-service:8001
+      - FILES_SERVICE_URL=http://files-service:8002
+      - TRANSCODE_SERVICE_URL=http://transcode-service:8003
+      - SEARCH_SERVICE_URL=http://search-service:8004
+    depends_on:
+      - assets-service
+      - files-service
+      - transcode-service
+      - search-service
+    networks:
+      - microservices-network
+
+  # Assets Service
+  assets-service:
+    build:
+      context: .
+      dockerfile: docker/assets-service.Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/assets_db
+      - FILES_SERVICE_URL=http://files-service:8002
+      - SECRET_KEY=your-secret-key-here
+    depends_on:
+      - postgres
+      - files-service
+    networks:
+      - microservices-network
+
+  # Files Service
+  files-service:
+    build:
+      context: .
+      dockerfile: docker/files-service.Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/files_db
+      - S3_BUCKET
+      - S3_REGION
+      - S3_ACCESS_KEY
+      - S3_SECRET_KEY
+      - S3_ENDPOINT_URL
+      - SECRET_KEY=your-secret-key-here
+    depends_on:
+      - postgres
+    networks:
+      - microservices-network
+
+  # Transcode Service
+  transcode-service:
+    build:
+      context: .
+      dockerfile: docker/transcode-service.Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/transcode_db
+      - OUTPUT_FOLDER=/app/transcoded
+      - TEMP_FOLDER=/app/temp
+      - SECRET_KEY=your-secret-key-here
+    volumes:
+      - transcode-output:/app/transcoded
+      - transcode-temp:/app/temp
+    depends_on:
+      - postgres
+    networks:
+      - microservices-network
+
+  # Search Service
+  search-service:
+    build:
+      context: .
+      dockerfile: docker/search-service.Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/search_db
+      - SECRET_KEY=your-secret-key-here
+    depends_on:
+      - postgres
+      - elasticsearch
+    networks:
+      - microservices-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_MULTIPLE_DATABASES=assets_db,files_db,transcode_db,search_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    networks:
+      - microservices-network
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - microservices-network
+
+  # Elasticsearch for advanced search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - microservices-network
+
+
+
+  # Frontend React Application
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:80
+      - GENERATE_SOURCEMAP=false
+    depends_on:
+      - api-gateway
+    networks:
+      - microservices-network
+
+  # Nginx for load balancing (optional)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - api-gateway
+      - assets-service
+      - files-service
+      - transcode-service
+      - search-service
+    networks:
+      - microservices-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  elasticsearch-data:
+  file-uploads:
+  transcode-output:
+  transcode-temp:
+
+networks:
+  microservices-network:
+    driver: bridge 

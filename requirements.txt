@@ -1,0 +1,55 @@
+# Core Flask dependencies
+Flask==2.3.3
+Flask-RESTful==0.3.10
+Flask-CORS==4.0.0
+Flask-JWT-Extended==4.5.3
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5
+Flask-Limiter==3.5.0
+
+# Database
+psycopg2-binary==2.9.7
+redis==5.0.1
+SQLAlchemy==2.0.21
+
+# API Documentation
+flasgger==0.9.7.1
+marshmallow==3.20.1
+
+# File handling and media processing
+Pillow==10.0.1
+python-magic==0.4.27
+ffmpeg-python==0.2.0
+boto3==1.34.0
+
+# Search functionality
+elasticsearch==8.9.0
+elasticsearch-dsl==8.9.0
+
+# HTTP client for inter-service communication
+requests==2.31.0
+httpx==0.24.1
+
+# Configuration and environment
+python-dotenv==1.0.0
+pydantic==2.3.0
+pydantic-settings==2.0.3
+
+# Logging and monitoring
+structlog==23.1.0
+prometheus-client==0.17.1
+
+# Testing
+pytest==7.4.2
+pytest-flask==1.2.0
+pytest-cov==4.1.0
+
+# Development tools
+black==23.7.0
+flake8==6.0.0
+mypy==1.5.1
+
+# Utilities
+click==8.1.7
+python-dateutil==2.8.2
+uuid==1.30 
