@@ -2,6 +2,8 @@
 
 A small demo Media Asset Management service  built with Flask, featuring assets, files, transcode, and search microservices and a react frontend.
 
+<img width="1458" height="1203" alt="mini-mam" src="https://github.com/user-attachments/assets/b1072ae3-fd3a-47c2-a9e5-8019b8d904e1" />
+
 This project was created using [Cursor](https://cursor.com/)
 
 ## Architecture
