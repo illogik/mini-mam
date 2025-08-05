@@ -237,4 +237,4 @@ docker build -f docker/assets-service.Dockerfile -t mini-mam-assets-service .
 
 ## License
 
-MIT License 
+[BSD 3-clause License ](LICENSE)
