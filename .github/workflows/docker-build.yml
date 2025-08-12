@@ -19,27 +19,27 @@ jobs:
           - name: api-gateway
             dockerfile: ./docker/api-gateway.Dockerfile
             context: .
-            image: ${{ env.DOCKER_REGISTRY }}/mini-mam-api-gateway
+            image: iconikio/mini-mam-api-gateway
           - name: assets-service
             dockerfile: ./docker/assets-service.Dockerfile
             context: .
-            image: ${{ env.DOCKER_REGISTRY }}/mini-mam-assets-service
+            image: iconikio/mini-mam-assets-service
           - name: files-service
             dockerfile: ./docker/files-service.Dockerfile
             context: .
-            image: ${{ env.DOCKER_REGISTRY }}/mini-mam-files-service
+            image: iconikio/mini-mam-files-service
           - name: transcode-service
             dockerfile: ./docker/transcode-service.Dockerfile
             context: .
-            image: ${{ env.DOCKER_REGISTRY }}/mini-mam-transcode-service
+            image: iconikio/mini-mam-transcode-service
           - name: search-service
             dockerfile: ./docker/search-service.Dockerfile
             context: .
-            image: ${{ env.DOCKER_REGISTRY }}/mini-mam-search-service
+            image: iconikio/mini-mam-search-service
           - name: frontend
             dockerfile: ./src/frontend/Dockerfile
             context: ./src/frontend
-            image: ${{ env.DOCKER_REGISTRY }}/mini-mam-frontend
+            image: iconikio/mini-mam-frontend
     
     steps:
     - name: Checkout code
