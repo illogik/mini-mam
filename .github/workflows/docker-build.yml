@@ -52,6 +52,7 @@ jobs:
         context: .
         file: ./docker/api-gateway.Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
+        images: ${{ env.DOCKER_REGISTRY }}/mini-mam-api-gateway
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -64,6 +65,7 @@ jobs:
         context: .
         file: ./docker/assets-service.Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
+        images: ${{ env.DOCKER_REGISTRY }}/mini-mam-assets-service
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -76,6 +78,7 @@ jobs:
         context: .
         file: ./docker/files-service.Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
+        images: ${{ env.DOCKER_REGISTRY }}/mini-mam-files-service
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -88,6 +91,7 @@ jobs:
         context: .
         file: ./docker/transcode-service.Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
+        images: ${{ env.DOCKER_REGISTRY }}/mini-mam-transcode-service
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -100,6 +104,7 @@ jobs:
         context: .
         file: ./docker/search-service.Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
+        images: ${{ env.DOCKER_REGISTRY }}/mini-mam-search-service
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -112,6 +117,7 @@ jobs:
         context: ./src/frontend
         file: ./src/frontend/Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
+        images: ${{ env.DOCKER_REGISTRY }}/mini-mam-frontend
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
