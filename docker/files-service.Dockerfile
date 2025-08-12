@@ -22,13 +22,17 @@ COPY src/shared/ ./shared/
 # Create upload directory
 RUN mkdir -p /app/uploads
 
+# Create metrics directory
+RUN mkdir -p /tmp/prometheus_multiproc
+
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+    && chown -R app:app /app \
+    && chown -R app:app /tmp/prometheus_multiproc
 USER app
 
-# Expose port
-EXPOSE 8002
+# Expose ports
+EXPOSE 8002 9092
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \

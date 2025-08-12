@@ -6,6 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
@@ -16,13 +17,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/search-service/ ./search-service/
 COPY src/shared/ ./shared/
 
+# Create metrics directory
+RUN mkdir -p /tmp/prometheus_multiproc
+
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+    && chown -R app:app /app \
+    && chown -R app:app /tmp/prometheus_multiproc
 USER app
 
-# Expose port
-EXPOSE 8004
+# Expose ports
+EXPOSE 8004 9093
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \

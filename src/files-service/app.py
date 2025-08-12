@@ -26,7 +26,7 @@ from shared.utils import (
 )
 from shared.metrics import (
     setup_metrics_endpoint, record_request_metrics, metrics_middleware,
-    db_operation_timer
+    db_operation_timer, cleanup_metrics
 )
 from prometheus_client import Counter
 setup_logging("files-service")
@@ -572,6 +572,9 @@ def internal_error(error):
     return jsonify(create_response(error="Internal server error", status_code=500)), 500
 
 if __name__ == '__main__':
+    # Setup cleanup for multiprocess metrics
+    cleanup_metrics()
+    
     with app.app_context():
         db.create_all()
     

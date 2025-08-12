@@ -50,8 +50,9 @@ This project was created using [Cursor](https://cursor.com/)
 
 ## Quick Start
 
-1. Build the docker images
+### Option 1: Docker (Recommended)
 
+1. Build the docker images
 ```bash
 make docker-build
 ```
@@ -66,6 +67,7 @@ cp .env.example .env
 # S3_SECRET_KEY=your-secret-key
 # S3_ENDPOINT_URL=https://s3.amazonaws.com  # For AWS S3
 ```
+
 3. Start the services
 ```bash
 # Start all services
@@ -73,8 +75,40 @@ make docker-up
 ```
 
 4. Access the service
-
 Go to http://localhost:80
+
+### Option 2: Local Development
+
+For local development without Docker, use the provided startup script:
+
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+2. Start services locally:
+```bash
+# Start all services
+python start_local.py
+
+# Or start specific services
+python start_local.py api-gateway assets-service
+```
+
+3. Access services:
+- **API Gateway**: http://localhost:8000
+- **Assets Service**: http://localhost:8001
+- **Files Service**: http://localhost:8002
+- **Transcode Service**: http://localhost:8003
+- **Search Service**: http://localhost:8004
+- **Frontend**: http://localhost:3000 (run separately with `npm start`)
+
+4. Access metrics:
+- **API Gateway Metrics**: http://localhost:9090/metrics
+- **Assets Service Metrics**: http://localhost:9091/metrics
+- **Files Service Metrics**: http://localhost:9092/metrics
+- **Search Service Metrics**: http://localhost:9093/metrics
+- **Transcode Service Metrics**: http://localhost:9094/metrics
 
 ## Deployment
 

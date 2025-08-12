@@ -15,7 +15,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils import setup_logging
-from shared.metrics import setup_metrics_endpoint, record_request_metrics, metrics_middleware
+from shared.metrics import setup_metrics_endpoint, record_request_metrics, metrics_middleware, cleanup_metrics
 setup_logging("api-gateway")
 
 app = Flask(__name__)
@@ -172,6 +172,9 @@ def internal_error(error):
     return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
+    # Setup cleanup for multiprocess metrics
+    cleanup_metrics()
+    
     port = int(os.getenv('API_GATEWAY_PORT', 8000))
     debug = os.getenv('FLASK_ENV') == 'development'
     

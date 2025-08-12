@@ -16,6 +16,7 @@ services:
       - TRANSCODE_SERVICE_URL=http://transcode-service:8003
       - SEARCH_SERVICE_URL=http://search-service:8004
       - API_GATEWAY_METRICS_PORT=9090
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
     depends_on:
       - assets-service
       - files-service
@@ -38,6 +39,7 @@ services:
       - FILES_SERVICE_URL=http://files-service:8002
       - SECRET_KEY=your-secret-key-here
       - ASSETS_SERVICE_METRICS_PORT=9091
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
     depends_on:
       - postgres
       - files-service
@@ -62,6 +64,7 @@ services:
       - S3_ENDPOINT_URL
       - SECRET_KEY=your-secret-key-here
       - FILES_SERVICE_METRICS_PORT=9092
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
     depends_on:
       - postgres
     networks:
@@ -82,6 +85,7 @@ services:
       - TEMP_FOLDER=/app/temp
       - SECRET_KEY=your-secret-key-here
       - TRANSCODE_SERVICE_METRICS_PORT=9094
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
     volumes:
       - transcode-output:/app/transcoded
       - transcode-temp:/app/temp
@@ -103,6 +107,7 @@ services:
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/search_db
       - SECRET_KEY=your-secret-key-here
       - SEARCH_SERVICE_METRICS_PORT=9093
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
     depends_on:
       - postgres
     networks:
