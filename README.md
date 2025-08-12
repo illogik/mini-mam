@@ -50,21 +50,13 @@ This project was created using [Cursor](https://cursor.com/)
 
 ## Quick Start
 
-1. Install dependencies:
+1. Build the docker images
+
 ```bash
-pip install -r requirements.txt
+make docker-build
 ```
 
-2. Start all services with Docker Compose:
-```bash
-docker-compose up
-```
-
-Set up S3 storage manually:
-   - **AWS S3**: Create an S3 bucket and configure AWS credentials
-   - **Other S3-compatible services**: Configure your preferred S3-compatible storage
-
-3. Set up environment variables:
+2. Set up environment variables:
 ```bash
 cp .env.example .env
 # Edit .env with your S3 configuration:
@@ -74,19 +66,70 @@ cp .env.example .env
 # S3_SECRET_KEY=your-secret-key
 # S3_ENDPOINT_URL=https://s3.amazonaws.com  # For AWS S3
 ```
-
-4. Build the docker images
-
-```bash
-make docker-build
-```
-
-5. Start the services
+3. Start the services
 ```bash
 # Start all services
 make docker-up
 ```
 
+4. Access the service
+
+Go to http://localhost:80
+
+## Deployment
+
+### Using Pre-built Docker Images
+
+The project includes GitHub Actions that automatically build and push Docker images to Docker Hub under the `iconikio` account.
+
+#### Quick Start with Pre-built Images
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd mini-mam
+   ```
+
+2. **Set up environment variables**:
+   ```bash
+   cp env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. **Run with pre-built images**:
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+#### Available Images
+
+The following images are available on Docker Hub:
+- `iconikio/mini-mam-api-gateway`
+- `iconikio/mini-mam-assets-service`
+- `iconikio/mini-mam-files-service`
+- `iconikio/mini-mam-transcode-service`
+- `iconikio/mini-mam-search-service`
+- `iconikio/mini-mam-frontend`
+
+#### Image Tags
+
+- `main`: Latest from main branch
+- `v1.0.0`: Semantic version tags
+- `sha-abc123`: Commit-specific tags
+
+### Building from Source
+
+To build images locally:
+
+```bash
+# Build all services
+docker-compose build
+
+# Or build individual services
+docker build -f docker/api-gateway.Dockerfile -t mini-mam-api-gateway .
+docker build -f docker/assets-service.Dockerfile -t mini-mam-assets-service .
+# ... etc
+```
 
 
 ## Development
@@ -172,60 +215,6 @@ Run tests for all services:
 python test_framework.py
 ```
 
-## Deployment
-
-### Using Pre-built Docker Images
-
-The project includes GitHub Actions that automatically build and push Docker images to Docker Hub under the `iconikio` account.
-
-#### Quick Start with Pre-built Images
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd mini-mam
-   ```
-
-2. **Set up environment variables**:
-   ```bash
-   cp env.example .env
-   # Edit .env with your configuration
-   ```
-
-3. **Run with pre-built images**:
-   ```bash
-   docker-compose -f docker-compose.prod.yml up -d
-   ```
-
-#### Available Images
-
-The following images are available on Docker Hub:
-- `iconikio/mini-mam-api-gateway`
-- `iconikio/mini-mam-assets-service`
-- `iconikio/mini-mam-files-service`
-- `iconikio/mini-mam-transcode-service`
-- `iconikio/mini-mam-search-service`
-- `iconikio/mini-mam-frontend`
-
-#### Image Tags
-
-- `main`: Latest from main branch
-- `v1.0.0`: Semantic version tags
-- `sha-abc123`: Commit-specific tags
-
-### Building from Source
-
-To build images locally:
-
-```bash
-# Build all services
-docker-compose build
-
-# Or build individual services
-docker build -f docker/api-gateway.Dockerfile -t mini-mam-api-gateway .
-docker build -f docker/assets-service.Dockerfile -t mini-mam-assets-service .
-# ... etc
-```
 
 ## Contributing
 
