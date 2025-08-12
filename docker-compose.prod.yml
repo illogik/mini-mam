@@ -6,12 +6,14 @@ services:
     image: iconikio/mini-mam-api-gateway:main
     ports:
       - "8000:8000"
+      - "9090:9090"  # Metrics port
     environment:
       - FLASK_ENV=production
       - ASSETS_SERVICE_URL=http://assets-service:8001
       - FILES_SERVICE_URL=http://files-service:8002
       - TRANSCODE_SERVICE_URL=http://transcode-service:8003
       - SEARCH_SERVICE_URL=http://search-service:8004
+      - API_GATEWAY_METRICS_PORT=9090
     depends_on:
       - assets-service
       - files-service
@@ -25,11 +27,13 @@ services:
     image: iconikio/mini-mam-assets-service:main
     ports:
       - "8001:8001"
+      - "9091:9091"  # Metrics port
     environment:
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/assets_db
       - FILES_SERVICE_URL=http://files-service:8002
       - SECRET_KEY=${SECRET_KEY}
+      - ASSETS_SERVICE_METRICS_PORT=9091
     depends_on:
       - postgres
       - files-service
@@ -41,6 +45,7 @@ services:
     image: iconikio/mini-mam-files-service:main
     ports:
       - "8002:8002"
+      - "9092:9092"  # Metrics port
     environment:
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/files_db
@@ -50,6 +55,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
       - SECRET_KEY=${SECRET_KEY}
+      - FILES_SERVICE_METRICS_PORT=9092
     depends_on:
       - postgres
     networks:
@@ -60,12 +66,14 @@ services:
     image: iconikio/mini-mam-transcode-service:main
     ports:
       - "8003:8003"
+      - "9094:9094"  # Metrics port
     environment:
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/transcode_db
       - OUTPUT_FOLDER=/app/transcoded
       - TEMP_FOLDER=/app/temp
       - SECRET_KEY=${SECRET_KEY}
+      - TRANSCODE_SERVICE_METRICS_PORT=9094
     volumes:
       - transcode-output:/app/transcoded
       - transcode-temp:/app/temp
@@ -79,10 +87,12 @@ services:
     image: iconikio/mini-mam-search-service:main
     ports:
       - "8004:8004"
+      - "9093:9093"  # Metrics port
     environment:
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/search_db
       - SECRET_KEY=${SECRET_KEY}
+      - SEARCH_SERVICE_METRICS_PORT=9093
     depends_on:
       - postgres
     networks:

@@ -17,10 +17,36 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils import setup_logging, create_response
+from shared.metrics import (
+    setup_metrics_endpoint, record_request_metrics, metrics_middleware,
+    db_operation_timer
+)
+from prometheus_client import Counter
 setup_logging("assets-service")
 
 app = Flask(__name__)
 CORS(app)
+
+# Assets Service specific metrics
+ASSETS_CREATED = Counter(
+    'assets_created_total',
+    'Total number of assets created'
+)
+
+ASSETS_UPDATED = Counter(
+    'assets_updated_total',
+    'Total number of assets updated'
+)
+
+ASSETS_DELETED = Counter(
+    'assets_deleted_total',
+    'Total number of assets deleted'
+)
+
+ASSETS_RETRIEVED = Counter(
+    'assets_retrieved_total',
+    'Total number of assets retrieved'
+)
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///assets.db')
@@ -35,6 +61,21 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["1000 per day", "100 per hour"]
 )
+
+# Setup metrics
+metrics_port = int(os.getenv('ASSETS_SERVICE_METRICS_PORT', 9091))
+setup_metrics_endpoint(app, metrics_port)
+
+# Add request metrics middleware
+@app.before_request
+def before_request():
+    request.start_time = metrics_middleware()(request)
+
+@app.after_request
+def after_request(response):
+    if hasattr(request, 'start_time'):
+        record_request_metrics(request.start_time, request, response)
+    return response
 
 # Create Flask-SQLAlchemy compatible Asset model
 class Asset(db.Model):
@@ -135,7 +176,8 @@ def create_asset():
             return jsonify(create_response(error="Name is required", status_code=400)), 400
         
         # Check if asset with same name already exists
-        existing_asset = Asset.query.filter_by(name=data['name'], is_active=True).first()
+        with db_operation_timer('select', 'assets'):
+            existing_asset = Asset.query.filter_by(name=data['name'], is_active=True).first()
         if existing_asset:
             return jsonify(create_response(error="Asset with this name already exists", status_code=409)), 409
         
@@ -150,8 +192,12 @@ def create_asset():
             tags=data.get('tags', [])
         )
         
-        db.session.add(asset)
-        db.session.commit()
+        with db_operation_timer('insert', 'assets'):
+            db.session.add(asset)
+            db.session.commit()
+        
+        # Record business metric
+        ASSETS_CREATED.inc()
         
         return jsonify(create_response(
             data=asset_to_dict(asset),
@@ -172,6 +218,9 @@ def get_asset(asset_id):
         
         if not asset:
             return jsonify(create_response(error="Asset not found", status_code=404)), 404
+        
+        # Record business metric
+        ASSETS_RETRIEVED.inc()
         
         return jsonify(create_response(data=asset_to_dict(asset)))
     
@@ -211,6 +260,9 @@ def update_asset(asset_id):
         asset.updated_at = datetime.utcnow()
         db.session.commit()
         
+        # Record business metric
+        ASSETS_UPDATED.inc()
+        
         return jsonify(create_response(
             data=asset_to_dict(asset),
             message="Asset updated successfully"
@@ -234,6 +286,9 @@ def delete_asset(asset_id):
         asset.is_active = False
         asset.updated_at = datetime.utcnow()
         db.session.commit()
+        
+        # Record business metric
+        ASSETS_DELETED.inc()
         
         return jsonify(create_response(message="Asset deleted successfully"))
     

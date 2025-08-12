@@ -24,10 +24,37 @@ from shared.utils import (
     setup_logging, create_response, calculate_file_hash, 
     get_file_size, get_mime_type, sanitize_filename, ensure_directory_exists
 )
+from shared.metrics import (
+    setup_metrics_endpoint, record_request_metrics, metrics_middleware,
+    db_operation_timer
+)
+from prometheus_client import Counter
 setup_logging("files-service")
 
 app = Flask(__name__)
 CORS(app)
+
+# Files Service specific metrics
+FILES_UPLOADED = Counter(
+    'files_uploaded_total',
+    'Total number of files uploaded',
+    ['file_type']
+)
+
+FILES_DOWNLOADED = Counter(
+    'files_downloaded_total',
+    'Total number of files downloaded'
+)
+
+FILES_DELETED = Counter(
+    'files_deleted_total',
+    'Total number of files deleted'
+)
+
+FILES_RETRIEVED = Counter(
+    'files_retrieved_total',
+    'Total number of files retrieved'
+)
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///files.db')
@@ -53,6 +80,21 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["1000 per day", "100 per hour"]
 )
+
+# Setup metrics
+metrics_port = int(os.getenv('FILES_SERVICE_METRICS_PORT', 9092))
+setup_metrics_endpoint(app, metrics_port)
+
+# Add request metrics middleware
+@app.before_request
+def before_request():
+    request.start_time = metrics_middleware()(request)
+
+@app.after_request
+def after_request(response):
+    if hasattr(request, 'start_time'):
+        record_request_metrics(request.start_time, request, response)
+    return response
 
 # Create Flask-SQLAlchemy compatible File model
 class File(db.Model):
@@ -324,8 +366,13 @@ def upload_file():
             asset_id=request.form.get('asset_id', type=int)
         )
         
-        db.session.add(file_record)
-        db.session.commit()
+        with db_operation_timer('insert', 'files'):
+            db.session.add(file_record)
+            db.session.commit()
+        
+        # Record business metric
+        file_type = mime_type.split('/')[0] if '/' in mime_type else 'unknown'
+        FILES_UPLOADED.labels(file_type=file_type).inc()
         
         return jsonify(create_response(
             data=file_to_dict(file_record),
@@ -393,6 +440,9 @@ def get_file(file_id):
         if not file_record:
             return jsonify(create_response(error="File not found", status_code=404)), 404
         
+        # Record business metric
+        FILES_RETRIEVED.inc()
+        
         return jsonify(create_response(data=file_to_dict(file_record)))
     
     except Exception as e:
@@ -417,6 +467,9 @@ def download_file(file_id):
         # Create a temporary file-like object
         file_data = io.BytesIO(s3_object.read())
         file_data.seek(0)
+        
+        # Record business metric
+        FILES_DOWNLOADED.inc()
         
         return send_file(
             file_data,
@@ -446,6 +499,7 @@ def delete_file(file_id):
         
         # Delete from S3 (optional - you might want to keep files in S3 for backup)
         delete_from_s3(file_record.s3_key)
+        FILES_DELETED.inc()
         
         return jsonify(create_response(message="File deleted successfully"))
     

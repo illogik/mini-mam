@@ -15,6 +15,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils import setup_logging
+from shared.metrics import setup_metrics_endpoint, record_request_metrics, metrics_middleware
 setup_logging("api-gateway")
 
 app = Flask(__name__)
@@ -30,6 +31,10 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
+# Setup metrics
+metrics_port = int(os.getenv('API_GATEWAY_METRICS_PORT', 9090))
+setup_metrics_endpoint(app, metrics_port)
+
 # Service URLs
 SERVICES = {
     'assets': os.getenv('ASSETS_SERVICE_URL', 'http://localhost:8001'),
@@ -37,6 +42,17 @@ SERVICES = {
     'transcode': os.getenv('TRANSCODE_SERVICE_URL', 'http://localhost:8003'),
     'search': os.getenv('SEARCH_SERVICE_URL', 'http://localhost:8004')
 }
+
+# Add request metrics middleware
+@app.before_request
+def before_request():
+    request.start_time = metrics_middleware()(request)
+
+@app.after_request
+def after_request(response):
+    if hasattr(request, 'start_time'):
+        record_request_metrics(request.start_time, request, response)
+    return response
 
 @app.route('/health', methods=['GET'])
 def health_check():

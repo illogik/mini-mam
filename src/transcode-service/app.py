@@ -19,10 +19,34 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils import setup_logging, create_response, ensure_directory_exists
+from shared.metrics import (
+    setup_metrics_endpoint, record_request_metrics, metrics_middleware,
+    db_operation_timer
+)
+from prometheus_client import Counter, Histogram
 setup_logging("transcode-service")
 
 app = Flask(__name__)
 CORS(app)
+
+# Transcode Service specific metrics
+TRANSCODE_JOBS = Counter(
+    'transcode_jobs_total',
+    'Total number of transcode jobs',
+    ['status']
+)
+
+TRANSCODE_DURATION = Histogram(
+    'transcode_duration_seconds',
+    'Transcode job duration in seconds',
+    ['source_format', 'target_format']
+)
+
+TRANSCODE_PROGRESS = Histogram(
+    'transcode_progress_percentage',
+    'Transcode job progress percentage',
+    ['status']
+)
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///transcode.db')
@@ -41,6 +65,21 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["100 per day", "10 per hour"]
 )
+
+# Setup metrics
+metrics_port = int(os.getenv('TRANSCODE_SERVICE_METRICS_PORT', 9094))
+setup_metrics_endpoint(app, metrics_port)
+
+# Add request metrics middleware
+@app.before_request
+def before_request():
+    request.start_time = metrics_middleware()(request)
+
+@app.after_request
+def after_request(response):
+    if hasattr(request, 'start_time'):
+        record_request_metrics(request.start_time, request, response)
+    return response
 
 # Create Flask-SQLAlchemy compatible Transcode model
 class Transcode(db.Model):
@@ -144,8 +183,12 @@ def create_transcode():
             status='pending'
         )
         
-        db.session.add(transcode)
-        db.session.commit()
+        with db_operation_timer('insert', 'transcodes'):
+            db.session.add(transcode)
+            db.session.commit()
+        
+        # Record business metric
+        TRANSCODE_JOBS.labels(status='pending').inc()
         
         # Start transcode job in background
         threading.Thread(target=process_transcode, args=(transcode.id,)).start()
@@ -221,6 +264,9 @@ def process_transcode(transcode_id):
             if not transcode:
                 return
             
+            # Record start time for duration calculation
+            start_time = time.time()
+            
             # Update status to processing
             transcode.status = 'processing'
             transcode.progress = 0
@@ -242,6 +288,13 @@ def process_transcode(transcode_id):
             transcode.updated_at = datetime.utcnow()
             db.session.commit()
             
+            # Record business metrics
+            TRANSCODE_JOBS.labels(status='completed').inc()
+            TRANSCODE_DURATION.labels(
+                source_format=transcode.source_format,
+                target_format=transcode.target_format
+            ).observe(time.time() - start_time)
+            
             logging.info(f"Transcode {transcode_id} completed successfully")
     
     except Exception as e:
@@ -252,6 +305,9 @@ def process_transcode(transcode_id):
                 transcode.error_message = str(e)
                 transcode.updated_at = datetime.utcnow()
                 db.session.commit()
+                
+                # Record business metric
+                TRANSCODE_JOBS.labels(status='failed').inc()
         
         logging.error(f"Error processing transcode {transcode_id}: {e}")
 

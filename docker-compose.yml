@@ -8,12 +8,14 @@ services:
       dockerfile: docker/api-gateway.Dockerfile
     ports:
       - "8000:8000"
+      - "9090:9090"  # Metrics port
     environment:
       - FLASK_ENV=development
       - ASSETS_SERVICE_URL=http://assets-service:8001
       - FILES_SERVICE_URL=http://files-service:8002
       - TRANSCODE_SERVICE_URL=http://transcode-service:8003
       - SEARCH_SERVICE_URL=http://search-service:8004
+      - API_GATEWAY_METRICS_PORT=9090
     depends_on:
       - assets-service
       - files-service
@@ -29,11 +31,13 @@ services:
       dockerfile: docker/assets-service.Dockerfile
     ports:
       - "8001:8001"
+      - "9091:9091"  # Metrics port
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/assets_db
       - FILES_SERVICE_URL=http://files-service:8002
       - SECRET_KEY=your-secret-key-here
+      - ASSETS_SERVICE_METRICS_PORT=9091
     depends_on:
       - postgres
       - files-service
@@ -47,6 +51,7 @@ services:
       dockerfile: docker/files-service.Dockerfile
     ports:
       - "8002:8002"
+      - "9092:9092"  # Metrics port
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/files_db
@@ -56,6 +61,7 @@ services:
       - S3_SECRET_KEY
       - S3_ENDPOINT_URL
       - SECRET_KEY=your-secret-key-here
+      - FILES_SERVICE_METRICS_PORT=9092
     depends_on:
       - postgres
     networks:
@@ -68,12 +74,14 @@ services:
       dockerfile: docker/transcode-service.Dockerfile
     ports:
       - "8003:8003"
+      - "9094:9094"  # Metrics port
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/transcode_db
       - OUTPUT_FOLDER=/app/transcoded
       - TEMP_FOLDER=/app/temp
       - SECRET_KEY=your-secret-key-here
+      - TRANSCODE_SERVICE_METRICS_PORT=9094
     volumes:
       - transcode-output:/app/transcoded
       - transcode-temp:/app/temp
@@ -89,10 +97,12 @@ services:
       dockerfile: docker/search-service.Dockerfile
     ports:
       - "8004:8004"
+      - "9093:9093"  # Metrics port
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/search_db
       - SECRET_KEY=your-secret-key-here
+      - SEARCH_SERVICE_METRICS_PORT=9093
     depends_on:
       - postgres
     networks:

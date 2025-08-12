@@ -16,10 +16,34 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils import setup_logging, create_response
+from shared.metrics import (
+    setup_metrics_endpoint, record_request_metrics, metrics_middleware,
+    db_operation_timer
+)
+from prometheus_client import Counter
 setup_logging("search-service")
 
 app = Flask(__name__)
 CORS(app)
+
+# Search Service specific metrics
+SEARCH_QUERIES = Counter(
+    'search_queries_total',
+    'Total number of search queries',
+    ['query_type']
+)
+
+SEARCH_RESULTS = Counter(
+    'search_results_total',
+    'Total number of search results returned',
+    ['query_type']
+)
+
+CONTENT_INDEXED = Counter(
+    'content_indexed_total',
+    'Total number of content items indexed',
+    ['entity_type']
+)
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///search.db')
@@ -34,6 +58,21 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["1000 per day", "100 per hour"]
 )
+
+# Setup metrics
+metrics_port = int(os.getenv('SEARCH_SERVICE_METRICS_PORT', 9093))
+setup_metrics_endpoint(app, metrics_port)
+
+# Add request metrics middleware
+@app.before_request
+def before_request():
+    request.start_time = metrics_middleware()(request)
+
+@app.after_request
+def after_request(response):
+    if hasattr(request, 'start_time'):
+        record_request_metrics(request.start_time, request, response)
+    return response
 
 # Create Flask-SQLAlchemy compatible SearchIndex model
 class SearchIndex(db.Model):
@@ -91,7 +130,8 @@ def search():
             pass
         
         # Execute search and filter results
-        all_results = search_query.all()
+        with db_operation_timer('select', 'search_indices'):
+            all_results = search_query.all()
         
         # Filter results in Python
         filtered_results = []
@@ -100,6 +140,11 @@ def search():
             search_data_str = str(result.search_data).lower()
             if query.lower() in search_data_str:
                 filtered_results.append(result)
+        
+        # Record business metrics
+        query_type = entity_type if entity_type else 'all'
+        SEARCH_QUERIES.labels(query_type=query_type).inc()
+        SEARCH_RESULTS.labels(query_type=query_type).inc(total)
         
         # Apply pagination manually
         total = len(filtered_results)
@@ -181,6 +226,9 @@ def index_content():
             db.session.add(search_index)
         
         db.session.commit()
+        
+        # Record business metric
+        CONTENT_INDEXED.labels(entity_type=entity_type).inc()
         
         return jsonify(create_response(message="Content indexed successfully"))
     
