@@ -60,12 +60,15 @@ make docker-build
 2. Set up environment variables:
 ```bash
 cp .env.example .env
-# Edit .env with your S3 configuration:
+# Edit .env with your configuration:
 # S3_BUCKET=your-bucket-name
 # S3_REGION=us-east-1
 # S3_ACCESS_KEY=your-access-key
 # S3_SECRET_KEY=your-secret-key
 # S3_ENDPOINT_URL=https://s3.amazonaws.com  # For AWS S3
+# JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
+# ADMIN_PASSWORD=your-admin-password
+# USER_PASSWORD=your-user-password
 ```
 
 3. Start the services
@@ -76,6 +79,27 @@ make docker-up
 
 4. Access the service
 Go to http://localhost:80
+
+### Authentication
+
+The API and frontend require authentication. Use the following credentials to get started:
+
+- **Username**: `admin`
+- **Password**: Set via `ADMIN_PASSWORD` environment variable (default: `admin123`)
+- **Username**: `user`
+- **Password**: Set via `USER_PASSWORD` environment variable (default: `user123`)
+
+#### Frontend Authentication
+
+The React frontend includes a complete authentication system:
+- **Login Page**: Modern, responsive login interface
+- **Demo Buttons**: Quick login with predefined credentials
+- **User Display**: Shows current user and role in header
+- **Auto-login**: Persistent sessions using localStorage
+- **Protected Routes**: All features require authentication
+
+See [AUTHENTICATION.md](AUTHENTICATION.md) for detailed backend authentication instructions.
+See [src/frontend/AUTHENTICATION.md](src/frontend/AUTHENTICATION.md) for frontend authentication details.
 
 ### Option 2: Local Development
 
@@ -100,7 +124,7 @@ python start_local.py api-gateway assets-service
 - **Assets Service**: http://localhost:8001
 - **Files Service**: http://localhost:8002
 - **Transcode Service**: http://localhost:8003
-- **Search Service**: http://localhost:8004
+- **Search Service**: http://localhost:8004 (requires authentication)
 - **Frontend**: http://localhost:3000 (run separately with `npm start`)
 
 4. Access metrics:

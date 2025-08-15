@@ -17,6 +17,9 @@ services:
       - SEARCH_SERVICE_URL=http://search-service:8004
       - API_GATEWAY_METRICS_PORT=9090
       - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
+      - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
+      - ADMIN_PASSWORD=admin123
+      - USER_PASSWORD=user123
     depends_on:
       - assets-service
       - files-service

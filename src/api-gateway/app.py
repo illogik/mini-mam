@@ -16,6 +16,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils import setup_logging
 from shared.metrics import setup_metrics_endpoint, record_request_metrics, metrics_middleware, cleanup_metrics
+from shared.auth import authenticate_user, generate_token, require_auth, require_role, optional_auth
 setup_logging("api-gateway")
 
 app = Flask(__name__)
@@ -63,10 +64,76 @@ def health_check():
         "timestamp": "2024-01-01T00:00:00Z"
     })
 
+# Authentication endpoints
+@app.route('/auth/login', methods=['POST'])
+@limiter.limit("10 per minute")
+def login():
+    """Login endpoint to obtain JWT token"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'username' not in data or 'password' not in data:
+            return jsonify({
+                'error': 'Missing credentials',
+                'message': 'Username and password are required'
+            }), 400
+        
+        username = data['username']
+        password = data['password']
+        
+        # Authenticate user
+        user = authenticate_user(username, password)
+        if not user:
+            return jsonify({
+                'error': 'Authentication failed',
+                'message': 'Invalid username or password'
+            }), 401
+        
+        # Generate JWT token
+        token = generate_token(user['user_id'], user['username'], user['role'])
+        
+        return jsonify({
+            'message': 'Login successful',
+            'token': token,
+            'user': {
+                'user_id': user['user_id'],
+                'username': user['username'],
+                'role': user['role']
+            }
+        }), 200
+    
+    except Exception as e:
+        logging.error(f"Login error: {e}")
+        return jsonify({
+            'error': 'Internal server error',
+            'message': 'An error occurred during login'
+        }), 500
+
+@app.route('/auth/verify', methods=['POST'])
+@limiter.limit("100 per minute")
+@require_auth
+def verify_token():
+    """Verify JWT token endpoint"""
+    return jsonify({
+        'message': 'Token is valid',
+        'user': request.user
+    }), 200
+
+@app.route('/auth/me', methods=['GET'])
+@limiter.limit("100 per minute")
+@require_auth
+def get_current_user():
+    """Get current user information"""
+    return jsonify({
+        'user': request.user
+    }), 200
+
+# Protected API endpoints
 @app.route('/api/assets', methods=['GET', 'POST'])
 @app.route('/api/assets/', methods=['GET', 'POST'])
 @app.route('/api/assets/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @limiter.limit("100 per minute")
+@require_auth
 def assets_proxy(subpath=None):
     """Proxy requests to assets service"""
     return proxy_request('assets', request, subpath)
@@ -75,6 +142,7 @@ def assets_proxy(subpath=None):
 @app.route('/api/files/', methods=['GET', 'POST'])
 @app.route('/api/files/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @limiter.limit("50 per minute")
+@require_auth
 def files_proxy(subpath=None):
     """Proxy requests to files service"""
     return proxy_request('files', request, subpath)
@@ -83,6 +151,7 @@ def files_proxy(subpath=None):
 @app.route('/api/transcode/', methods=['GET', 'POST'])
 @app.route('/api/transcode/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @limiter.limit("30 per minute")
+@require_auth
 def transcode_proxy(subpath=None):
     """Proxy requests to transcode service"""
     return proxy_request('transcode', request, subpath)
@@ -91,6 +160,7 @@ def transcode_proxy(subpath=None):
 @app.route('/api/search/', methods=['GET', 'POST'])
 @app.route('/api/search/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @limiter.limit("200 per minute")
+@require_auth  # Search now requires authentication
 def search_proxy(subpath=None):
     """Proxy requests to search service"""
     return proxy_request('search', request, subpath)
@@ -112,6 +182,12 @@ def proxy_request(service_name, request, subpath=None):
             'Authorization': request.headers.get('Authorization', ''),
             'User-Agent': 'API-Gateway'
         }
+        
+        # Add user information to headers if available
+        if hasattr(request, 'user') and request.user:
+            headers['X-User-ID'] = str(request.user.get('user_id', ''))
+            headers['X-Username'] = request.user.get('username', '')
+            headers['X-User-Role'] = request.user.get('role', '')
         
         # Remove headers that shouldn't be forwarded
         for header in ['Host', 'Content-Length']:
@@ -141,6 +217,8 @@ def proxy_request(service_name, request, subpath=None):
         return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/api/status', methods=['GET'])
+@limiter.limit("50 per minute")
+@require_auth
 def service_status():
     """Check status of all microservices"""
     status = {}
