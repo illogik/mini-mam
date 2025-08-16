@@ -1,8 +1,8 @@
 import axios, { AxiosResponse } from 'axios';
 import { Asset, AssetsResponse, FileRecord, FilesResponse } from '../types/api';
 
-// Configure axios base URL - this will be the nginx proxy
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:80';
+// Configure axios base URL - use host-relative URLs by default
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

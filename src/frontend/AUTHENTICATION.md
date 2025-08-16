@@ -180,8 +180,10 @@ npm run build
 ### Environment Variables
 
 ```bash
-REACT_APP_API_URL=http://localhost:80  # API Gateway URL
+REACT_APP_API_URL=  # Optional: Override API URL (defaults to host-relative URLs)
 ```
+
+**Note**: By default, the frontend uses host-relative URLs (same host as the frontend). Set `REACT_APP_API_URL` only if you need to use a different API server.
 
 ## Testing
 

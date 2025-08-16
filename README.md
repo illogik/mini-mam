@@ -80,6 +80,8 @@ make docker-up
 4. Access the service
 Go to http://localhost:80
 
+**Note**: The frontend uses host-relative URLs by default, so API calls will automatically use the same host as the frontend.
+
 ### Authentication
 
 The API and frontend require authentication. Use the following credentials to get started:
