@@ -96,6 +96,18 @@ def make_service_request(service_url: str, endpoint: str, method: str = 'GET',
         raise
 
 
+def construct_database_url(database_name: str) -> str:
+    """Construct database URL with variable substitution from environment variables"""
+    # Get database connection parameters from environment
+    db_user = os.getenv('POSTGRES_USER', 'postgres')
+    db_password = os.getenv('POSTGRES_PASSWORD', 'password')
+    db_host = os.getenv('POSTGRES_HOST', 'postgres')
+    db_port = os.getenv('POSTGRES_PORT', '5432')
+    
+    # Construct the database URL
+    return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{database_name}"
+
+
 def create_response(data: Any = None, message: str = "Success", 
                    status_code: int = 200, error: str = None) -> Dict:
     """Create standardized API response"""

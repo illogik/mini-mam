@@ -16,7 +16,7 @@ load_dotenv()
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from shared.utils import setup_logging, create_response
+from shared.utils import setup_logging, create_response, construct_database_url
 from shared.metrics import (
     setup_metrics_endpoint, record_request_metrics, metrics_middleware,
     db_operation_timer, cleanup_metrics
@@ -49,7 +49,7 @@ ASSETS_RETRIEVED = Counter(
 )
 
 # Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///assets.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = construct_database_url('assets_db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
 

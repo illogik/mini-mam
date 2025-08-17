@@ -22,7 +22,8 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils import (
     setup_logging, create_response, calculate_file_hash, 
-    get_file_size, get_mime_type, sanitize_filename, ensure_directory_exists
+    get_file_size, get_mime_type, sanitize_filename, ensure_directory_exists,
+    construct_database_url
 )
 from shared.metrics import (
     setup_metrics_endpoint, record_request_metrics, metrics_middleware,
@@ -57,7 +58,7 @@ FILES_RETRIEVED = Counter(
 )
 
 # Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///files.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = construct_database_url('files_db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
 

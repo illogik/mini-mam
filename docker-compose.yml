@@ -38,7 +38,10 @@ services:
       - "9091:9091"  # Metrics port
     environment:
       - FLASK_ENV=development
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/assets_db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - FILES_SERVICE_URL=http://files-service:8002
       - SECRET_KEY=your-secret-key-here
       - ASSETS_SERVICE_METRICS_PORT=9091
@@ -59,7 +62,10 @@ services:
       - "9092:9092"  # Metrics port
     environment:
       - FLASK_ENV=development
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/files_db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - S3_BUCKET
       - S3_REGION
       - S3_ACCESS_KEY
@@ -83,7 +89,10 @@ services:
       - "9094:9094"  # Metrics port
     environment:
       - FLASK_ENV=development
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/transcode_db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - OUTPUT_FOLDER=/app/transcoded
       - TEMP_FOLDER=/app/temp
       - SECRET_KEY=your-secret-key-here
@@ -107,7 +116,10 @@ services:
       - "9093:9093"  # Metrics port
     environment:
       - FLASK_ENV=development
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/search_db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - SECRET_KEY=your-secret-key-here
       - SEARCH_SERVICE_METRICS_PORT=9093
       - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
@@ -120,8 +132,8 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_MULTIPLE_DATABASES=assets_db,files_db,transcode_db,search_db
     ports:
       - "5432:5432"
