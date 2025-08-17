@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AssetsService, FilesService } from '../services/api';
 import { Asset } from '../types/api';
 import './AssetsPage.css';
@@ -21,7 +21,7 @@ interface AssetFormProps {
   uploading: boolean;
 }
 
-const AssetForm: React.FC<AssetFormProps> = ({ 
+const AssetForm: React.FC<AssetFormProps> = React.memo(({ 
   onSubmit, 
   onCancel, 
   title, 
@@ -31,12 +31,16 @@ const AssetForm: React.FC<AssetFormProps> = ({
   setSelectedFile, 
   uploading 
 }) => {
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
     }
-  };
+  }, [setSelectedFile]);
+
+  const handleInputChange = useCallback((field: string, value: string) => {
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  }, [setFormData]);
 
   return (
     <div className="asset-form-overlay">
@@ -49,7 +53,7 @@ const AssetForm: React.FC<AssetFormProps> = ({
               type="text"
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => handleInputChange('name', e.target.value)}
               required
             />
           </div>
@@ -58,7 +62,7 @@ const AssetForm: React.FC<AssetFormProps> = ({
             <textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) => handleInputChange('description', e.target.value)}
             />
           </div>
           <div className="form-group">
@@ -67,7 +71,7 @@ const AssetForm: React.FC<AssetFormProps> = ({
               type="text"
               id="type"
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              onChange={(e) => handleInputChange('type', e.target.value)}
               required
             />
           </div>
@@ -103,7 +107,67 @@ const AssetForm: React.FC<AssetFormProps> = ({
       </div>
     </div>
   );
-};
+});
+
+// Memoized asset card component
+const AssetCard: React.FC<{
+  asset: Asset;
+  onEdit: (asset: Asset) => void;
+  onDownload: (asset: Asset) => void;
+  onDelete: (id: string) => void;
+}> = React.memo(({ asset, onEdit, onDownload, onDelete }) => {
+  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCAxMDBDODAgODkuNTQ0NyA4OC4wMDAxIDgxIDEwMCA4MUMxMTEuMDQ2IDgxIDEyMCA4OS41NDQ3IDEyMCAxMDBDMTIwIDExMC40NTUgMTExLjA0NiAxMTkgMTAwIDExOUM4OC4wMDAxIDExOSA4MCAxMTAuNDU1IDgwIDEwMFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPC9zdmc+';
+  }, []);
+
+  const formattedDate = useMemo(() => {
+    return new Date(asset.created_at).toLocaleDateString();
+  }, [asset.created_at]);
+
+  return (
+    <div className="asset-card">
+      <div className="asset-image">
+        <img 
+          src={asset.url} 
+          alt={asset.name} 
+          onError={handleImageError}
+          loading="lazy"
+        />
+      </div>
+      <div className="asset-info">
+        <h3>{asset.name}</h3>
+        <p className="asset-description">{asset.description}</p>
+        <div className="asset-meta">
+          <span className="asset-type">{asset.type}</span>
+          <span className="asset-date">{formattedDate}</span>
+          {asset.file_id && (
+            <span className="asset-file">File ID: {asset.file_id}</span>
+          )}
+        </div>
+        <div className="asset-actions">
+          <button
+            onClick={() => onEdit(asset)}
+            className="btn-secondary btn-small"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => onDownload(asset)}
+            className="btn-primary btn-small"
+          >
+            Download
+          </button>
+          <button
+            onClick={() => onDelete(asset.id)}
+            className="btn-danger btn-small"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 const AssetsPage: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -141,11 +205,7 @@ const AssetsPage: React.FC = () => {
     }
   }, [page, searchQuery]);
 
-  useEffect(() => {
-    loadAssets();
-  }, [loadAssets]);
-
-  // Debounce search query
+  // Debounced search effect
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1); // Reset to first page when searching
@@ -154,7 +214,12 @@ const AssetsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const handleCreateAsset = async (e: React.FormEvent) => {
+  // Load assets when page or search changes
+  useEffect(() => {
+    loadAssets();
+  }, [loadAssets]);
+
+  const handleCreateAsset = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedFile) {
@@ -187,9 +252,9 @@ const AssetsPage: React.FC = () => {
     } finally {
       setUploading(false);
     }
-  };
+  }, [formData, selectedFile, loadAssets]);
 
-  const handleUpdateAsset = async (e: React.FormEvent) => {
+  const handleUpdateAsset = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!editingAsset) return;
@@ -221,9 +286,9 @@ const AssetsPage: React.FC = () => {
     } finally {
       setUploading(false);
     }
-  };
+  }, [editingAsset, formData, selectedFile, loadAssets]);
 
-  const handleDeleteAsset = async (id: string) => {
+  const handleDeleteAsset = useCallback(async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this asset?')) {
       return;
     }
@@ -235,9 +300,9 @@ const AssetsPage: React.FC = () => {
       setError('Failed to delete asset. Please try again.');
       console.error('Delete asset error:', err);
     }
-  };
+  }, [loadAssets]);
 
-  const handleDownloadAsset = async (asset: Asset) => {
+  const handleDownloadAsset = useCallback(async (asset: Asset) => {
     try {
       // If the asset has a file_id, download from the files service
       if (asset.file_id) {
@@ -271,9 +336,9 @@ const AssetsPage: React.FC = () => {
       setError('Failed to download asset. Please try again.');
       console.error('Download asset error:', err);
     }
-  };
+  }, []);
 
-  const startEdit = (asset: Asset) => {
+  const startEdit = useCallback((asset: Asset) => {
     setEditingAsset(asset);
     setFormData({
       name: asset.name,
@@ -282,17 +347,48 @@ const AssetsPage: React.FC = () => {
       url: asset.url,
       file_id: asset.file_id
     });
-  };
+  }, []);
 
-  const cancelEdit = () => {
+  const cancelEdit = useCallback(() => {
     setEditingAsset(null);
     setFormData({ name: '', description: '', type: '', url: '', file_id: undefined });
     setSelectedFile(null);
-  };
+  }, []);
 
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
 
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, []);
 
+  const handlePageChange = useCallback((newPage: number) => {
+    setPage(newPage);
+  }, []);
 
+  const handleShowCreateForm = useCallback(() => {
+    setShowCreateForm(true);
+  }, []);
+
+  const handleHideCreateForm = useCallback(() => {
+    setShowCreateForm(false);
+  }, []);
+
+  // Memoize the assets grid to prevent unnecessary re-renders
+  const assetsGrid = useMemo(() => (
+    <div className="assets-grid">
+      {assets.map((asset) => (
+        <AssetCard
+          key={asset.id}
+          asset={asset}
+          onEdit={startEdit}
+          onDownload={handleDownloadAsset}
+          onDelete={handleDeleteAsset}
+        />
+      ))}
+    </div>
+  ), [assets, startEdit, handleDownloadAsset, handleDeleteAsset]);
 
   return (
     <div className="assets-page">
@@ -303,13 +399,13 @@ const AssetsPage: React.FC = () => {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
               placeholder="Search assets..."
               className="search-input"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={clearSearch}
                 className="clear-search-btn"
                 title="Clear search"
               >
@@ -319,7 +415,7 @@ const AssetsPage: React.FC = () => {
           </div>
         </div>
         <button
-          onClick={() => setShowCreateForm(true)}
+          onClick={handleShowCreateForm}
           className="btn-primary"
         >
           Add Asset
@@ -332,55 +428,12 @@ const AssetsPage: React.FC = () => {
         <div className="loading">Loading assets...</div>
       ) : (
         <>
-          <div className="assets-grid">
-            {assets.map((asset) => (
-              <div key={asset.id} className="asset-card">
-                <div className="asset-image">
-                  <img src={asset.url} alt={asset.name} onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik04MCAxMDBDODAgODkuNTQ0NyA4OC4wMDAxIDgxIDEwMCA4MUMxMTEuMDQ2IDgxIDEyMCA4OS41NDQ3IDEyMCAxMDBDMTIwIDExMC40NTUgMTExLjA0NiAxMTkgMTAwIDExOUM4OC4wMDAxIDExOSA4MCAxMTAuNDU1IDgwIDEwMFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPC9zdmc+';
-                  }} />
-                </div>
-                <div className="asset-info">
-                  <h3>{asset.name}</h3>
-                  <p className="asset-description">{asset.description}</p>
-                  <div className="asset-meta">
-                    <span className="asset-type">{asset.type}</span>
-                    <span className="asset-date">
-                      {new Date(asset.created_at).toLocaleDateString()}
-                    </span>
-                    {asset.file_id && (
-                      <span className="asset-file">File ID: {asset.file_id}</span>
-                    )}
-                  </div>
-                  <div className="asset-actions">
-                    <button
-                      onClick={() => startEdit(asset)}
-                      className="btn-secondary btn-small"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDownloadAsset(asset)}
-                      className="btn-primary btn-small"
-                    >
-                      Download
-                    </button>
-                    <button
-                      onClick={() => handleDeleteAsset(asset.id)}
-                      className="btn-danger btn-small"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {assetsGrid}
 
           {totalPages > 1 && (
             <div className="pagination">
               <button
-                onClick={() => setPage(page - 1)}
+                onClick={() => handlePageChange(page - 1)}
                 disabled={page === 1}
                 className="btn-secondary"
               >
@@ -390,7 +443,7 @@ const AssetsPage: React.FC = () => {
                 Page {page} of {totalPages}
               </span>
               <button
-                onClick={() => setPage(page + 1)}
+                onClick={() => handlePageChange(page + 1)}
                 disabled={page === totalPages}
                 className="btn-secondary"
               >
@@ -404,7 +457,7 @@ const AssetsPage: React.FC = () => {
       {showCreateForm && (
         <AssetForm
           onSubmit={handleCreateAsset}
-          onCancel={() => setShowCreateForm(false)}
+          onCancel={handleHideCreateForm}
           title="Create New Asset"
           formData={formData}
           setFormData={setFormData}

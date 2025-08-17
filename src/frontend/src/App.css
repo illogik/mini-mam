@@ -165,6 +165,8 @@ body {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 20px;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 @keyframes spin {

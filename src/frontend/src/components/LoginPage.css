@@ -5,6 +5,8 @@
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
+  will-change: auto;
+  transform: translateZ(0);
 }
 
 .login-container {
@@ -61,7 +63,7 @@
   border: 2px solid #e1e5e9;
   border-radius: 8px;
   font-size: 1rem;
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
   box-sizing: border-box;
 }
 
@@ -106,7 +108,7 @@
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   margin-bottom: 20px;
 }
 
@@ -147,7 +149,7 @@
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.3s ease;
   flex: 1;
   max-width: 120px;
 }

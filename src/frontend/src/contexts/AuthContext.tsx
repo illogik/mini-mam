@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { AuthState, User, LoginCredentials } from '../types/auth';
 import { AuthService } from '../services/auth';
 
@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     dispatch({ type: 'AUTH_START' });
     
     try {
@@ -135,23 +135,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
       throw error;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await AuthService.logout();
     dispatch({ type: 'AUTH_LOGOUT' });
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     dispatch({ type: 'CLEAR_ERROR' });
-  };
+  }, []);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     ...state,
     login,
     logout,
     clearError,
-  };
+  }), [state, login, logout, clearError]);
 
   return (
     <AuthContext.Provider value={value}>

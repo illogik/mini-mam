@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './LoginPage.css';
 
-const LoginPage: React.FC = () => {
+const LoginPage: React.FC = React.memo(() => {
   const { login, error, clearError, loading } = useAuth();
   const [credentials, setCredentials] = useState({
     username: '',
@@ -18,7 +18,7 @@ const LoginPage: React.FC = () => {
     clearError();
   }, [clearError]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setCredentials(prev => ({
       ...prev,
@@ -26,15 +26,18 @@ const LoginPage: React.FC = () => {
     }));
     
     // Clear field error when user starts typing
-    if (formErrors[name as keyof typeof formErrors]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
+    setFormErrors(prev => {
+      if (prev[name as keyof typeof prev]) {
+        return {
+          ...prev,
+          [name]: ''
+        };
+      }
+      return prev;
+    });
+  }, []);
 
-  const validateForm = (): boolean => {
+  const validateForm = useCallback((): boolean => {
     const errors = {
       username: '',
       password: '',
@@ -50,9 +53,9 @@ const LoginPage: React.FC = () => {
 
     setFormErrors(errors);
     return !errors.username && !errors.password;
-  };
+  }, [credentials.username, credentials.password]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -65,9 +68,60 @@ const LoginPage: React.FC = () => {
       // Error is handled by the auth context
       console.error('Login failed:', error);
     }
-  };
+  }, [validateForm, login, credentials]);
 
+  // Memoize the form JSX to prevent unnecessary re-renders
+  const loginForm = useMemo(() => (
+    <form className="login-form" onSubmit={handleSubmit}>
+      <div className="form-group">
+        <label htmlFor="username">Username</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          value={credentials.username}
+          onChange={handleInputChange}
+          className={formErrors.username ? 'error' : ''}
+          placeholder="Enter your username"
+          disabled={loading}
+        />
+        {formErrors.username && (
+          <span className="error-message">{formErrors.username}</span>
+        )}
+      </div>
 
+      <div className="form-group">
+        <label htmlFor="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          value={credentials.password}
+          onChange={handleInputChange}
+          className={formErrors.password ? 'error' : ''}
+          placeholder="Enter your password"
+          disabled={loading}
+        />
+        {formErrors.password && (
+          <span className="error-message">{formErrors.password}</span>
+        )}
+      </div>
+
+      {error && (
+        <div className="error-banner">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        className="login-button"
+        disabled={loading}
+      >
+        {loading ? 'Signing in...' : 'Sign In'}
+      </button>
+    </form>
+  ), [handleSubmit, credentials, formErrors, handleInputChange, loading, error]);
 
   return (
     <div className="login-page">
@@ -77,60 +131,10 @@ const LoginPage: React.FC = () => {
           <p>Media Asset Management System</p>
         </div>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={credentials.username}
-              onChange={handleInputChange}
-              className={formErrors.username ? 'error' : ''}
-              placeholder="Enter your username"
-              disabled={loading}
-            />
-            {formErrors.username && (
-              <span className="error-message">{formErrors.username}</span>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={credentials.password}
-              onChange={handleInputChange}
-              className={formErrors.password ? 'error' : ''}
-              placeholder="Enter your password"
-              disabled={loading}
-            />
-            {formErrors.password && (
-              <span className="error-message">{formErrors.password}</span>
-            )}
-          </div>
-
-          {error && (
-            <div className="error-banner">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="login-button"
-            disabled={loading}
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-
-
+        {loginForm}
       </div>
     </div>
   );
-};
+});
 
 export default LoginPage; 
