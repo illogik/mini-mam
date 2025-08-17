@@ -131,7 +131,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         payload: { user: response.user, token: response.token }
       });
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Login failed';
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error.response) {
+        // Server responded with error status
+        const { status, data } = error.response;
+        
+        if (status === 401) {
+          errorMessage = data?.error || 'Invalid username or password';
+        } else if (status === 400) {
+          errorMessage = data?.error || 'Invalid login credentials';
+        } else if (status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (status === 404) {
+          errorMessage = 'Authentication service not available';
+        } else {
+          errorMessage = data?.error || `Login failed (${status})`;
+        }
+      } else if (error.request) {
+        // Network error
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        // Other error
+        errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
+      console.error('Login error:', error);
       dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
       throw error;
     }

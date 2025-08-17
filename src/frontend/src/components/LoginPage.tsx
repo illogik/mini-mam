@@ -13,10 +13,11 @@ const LoginPage: React.FC = React.memo(() => {
     password: '',
   });
 
-  // Clear error when component mounts
+  // Clear error when component mounts (but only if there's no existing error)
   useEffect(() => {
-    clearError();
-  }, [clearError]);
+    // Only clear error on mount if there's no current error
+    // This prevents clearing errors that should be displayed
+  }, []);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,6 +36,9 @@ const LoginPage: React.FC = React.memo(() => {
       }
       return prev;
     });
+    
+    // Don't clear auth error immediately - let user see the error
+    // Only clear when they start a new login attempt
   }, []);
 
   const validateForm = useCallback((): boolean => {
@@ -58,17 +62,23 @@ const LoginPage: React.FC = React.memo(() => {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Clear any previous error when starting a new login attempt
+    if (error) {
+      clearError();
+    }
+    
     if (!validateForm()) {
       return;
     }
 
     try {
       await login(credentials);
+      // Success - user will be redirected automatically by auth context
     } catch (error) {
       // Error is handled by the auth context
       console.error('Login failed:', error);
     }
-  }, [validateForm, login, credentials]);
+  }, [validateForm, login, credentials, error, clearError]);
 
   // Memoize the form JSX to prevent unnecessary re-renders
   const loginForm = useMemo(() => (
@@ -110,6 +120,13 @@ const LoginPage: React.FC = React.memo(() => {
       {error && (
         <div className="error-banner">
           {error}
+        </div>
+      )}
+      
+      {/* Debug info - remove in production */}
+      {process.env.NODE_ENV === 'development' && error && (
+        <div style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+          Debug: Error state is active
         </div>
       )}
 
