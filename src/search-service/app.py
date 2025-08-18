@@ -91,6 +91,7 @@ with app.app_context():
     db.create_all()
 
 @app.route('/health', methods=['GET'])
+@limiter.exempt
 def health_check():
     """Health check endpoint"""
     return jsonify({

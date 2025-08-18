@@ -56,6 +56,7 @@ def after_request(response):
     return response
 
 @app.route('/health', methods=['GET'])
+@limiter.exempt
 def health_check():
     """Health check endpoint"""
     return jsonify({

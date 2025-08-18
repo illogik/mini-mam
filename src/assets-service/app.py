@@ -118,6 +118,7 @@ def get_presigned_url_from_files_service(file_id):
         return None
 
 @app.route('/health', methods=['GET'])
+@limiter.exempt
 def health_check():
     """Health check endpoint"""
     return jsonify({

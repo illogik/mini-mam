@@ -113,6 +113,7 @@ SUPPORTED_FORMATS = {
 }
 
 @app.route('/health', methods=['GET'])
+@limiter.exempt
 def health_check():
     """Health check endpoint"""
     return jsonify({
