@@ -12,6 +12,7 @@ env:
 
 jobs:
   build-and-push:
+    if: false
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -40,7 +41,7 @@ jobs:
             dockerfile: ./src/frontend/Dockerfile
             context: ./src/frontend
             image: iconikio/mini-mam-frontend
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -78,4 +79,3 @@ jobs:
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
 
- 
