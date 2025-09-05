@@ -71,13 +71,15 @@ clean:
 ### ci commands ###
 ###################
 
+ecr-login:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+
 # api-gateway
 .PHONY: build-ci-api-gateway push-ci-api-gateway release-ci-api-gateway
 build-ci-api-gateway:
 	docker build -f docker/api-gateway.Dockerfile -t $(REGISTRY)/api-gateway:$(GIT_SHA) .
 
-push-ci-api-gateway:
-	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+push-ci-api-gateway: ecr-login
 	docker push $(REGISTRY)/api-gateway:$(GIT_SHA)
 
 release-ci-api-gateway: build-ci-api-gateway push-ci-api-gateway
@@ -87,8 +89,7 @@ release-ci-api-gateway: build-ci-api-gateway push-ci-api-gateway
 build-ci-assets-service:
 	docker build -f docker/assets-service.Dockerfile -t $(REGISTRY)/assets-service:$(GIT_SHA) .
 
-push-ci-assets-service:
-	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+push-ci-assets-service: ecr-login
 	docker push $(REGISTRY)/assets-service:$(GIT_SHA)
 
 release-ci-assets-service: build-ci-assets-service push-ci-assets-service
@@ -98,8 +99,7 @@ release-ci-assets-service: build-ci-assets-service push-ci-assets-service
 build-ci-files-service:
 	docker build -f docker/files-service.Dockerfile -t $(REGISTRY)/files-service:$(GIT_SHA) .
 
-push-ci-files-service:
-	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+push-ci-files-service: ecr-login
 	docker push $(REGISTRY)/files-service:$(GIT_SHA)
 
 release-ci-files-service: build-ci-files-service push-ci-files-service
@@ -109,8 +109,7 @@ release-ci-files-service: build-ci-files-service push-ci-files-service
 build-ci-search-service:
 	docker build -f docker/search-service.Dockerfile -t $(REGISTRY)/search-service:$(GIT_SHA) .
 
-push-ci-search-service:
-	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+push-ci-search-service: ecr-login
 	docker push $(REGISTRY)/search-service:$(GIT_SHA)
 
 release-ci-search-service: build-ci-search-service push-ci-search-service
@@ -120,8 +119,7 @@ release-ci-search-service: build-ci-search-service push-ci-search-service
 build-ci-transcode-service:
 	docker build -f docker/transcode-service.Dockerfile -t $(REGISTRY)/transcode-service:$(GIT_SHA) .
 
-push-ci-transcode-service:
-	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+push-ci-transcode-service: ecr-login
 	docker push $(REGISTRY)/transcode-service:$(GIT_SHA)
 
 release-ci-transcode-service: build-ci-transcode-service push-ci-transcode-service
@@ -131,8 +129,7 @@ release-ci-transcode-service: build-ci-transcode-service push-ci-transcode-servi
 build-ci-frontend:
 	docker build -f src/frontend/Dockerfile -t $(REGISTRY)/frontend:$(GIT_SHA) src/frontend
 
-push-ci-frontend:
-	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+push-ci-frontend: ecr-login
 	docker push $(REGISTRY)/frontend:$(GIT_SHA)
 
 release-ci-frontend: build-ci-frontend push-ci-frontend
