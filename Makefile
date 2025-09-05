@@ -67,7 +67,10 @@ clean:
 	find . -type f -name "*.db" -delete
 	rm -rf uploads/ transcoded/ temp/ logs/
 
-# ci commands
+###################
+### ci commands ###
+###################
+
 # api-gateway
 .PHONY: build-ci-api-gateway push-ci-api-gateway release-ci-api-gateway
 build-ci-api-gateway:
