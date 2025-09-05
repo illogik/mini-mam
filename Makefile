@@ -1,3 +1,8 @@
+AWS_REGION?=us-east-1
+ACCOUNT_ID?=079059455431
+GIT_SHA?=$(shell git rev-parse --short HEAD 2>/dev/null || echo 0.1)
+REGISTRY?=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
+
 # Flask Microservice Framework Makefile
 
 .PHONY: help install start stop test clean docker-build docker-up docker-down logs
@@ -61,6 +66,79 @@ clean:
 	find . -type d -name "__pycache__" -delete
 	find . -type f -name "*.db" -delete
 	rm -rf uploads/ transcoded/ temp/ logs/
+
+# ci commands
+# api-gateway
+.PHONY: build-ci-api-gateway push-ci-api-gateway release-ci-api-gateway
+build-ci-api-gateway:
+	docker build -f docker/api-gateway.Dockerfile -t $(REGISTRY)/api-gateway:$(GIT_SHA) .
+
+push-ci-api-gateway:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+	docker push $(REGISTRY)/api-gateway:$(GIT_SHA)
+
+release-ci-api-gateway: build-ci-api-gateway push-ci-api-gateway
+
+# assets-service
+.PHONY: build-ci-assets-service push-ci-assets-service release-ci-assets-service
+build-ci-assets-service:
+	docker build -f docker/assets-service.Dockerfile -t $(REGISTRY)/assets-service:$(GIT_SHA) .
+
+push-ci-assets-service:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+	docker push $(REGISTRY)/assets-service:$(GIT_SHA)
+
+release-ci-assets-service: build-ci-assets-service push-ci-assets-service
+
+# files-service
+.PHONY: build-ci-files-service push-ci-files-service release-ci-files-service
+build-ci-files-service:
+	docker build -f docker/files-service.Dockerfile -t $(REGISTRY)/files-service:$(GIT_SHA) .
+
+push-ci-files-service:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+	docker push $(REGISTRY)/files-service:$(GIT_SHA)
+
+release-ci-files-service: build-ci-files-service push-ci-files-service
+
+# search-service
+.PHONY: build-ci-search-service push-ci-search-service release-ci-search-service
+build-ci-search-service:
+	docker build -f docker/search-service.Dockerfile -t $(REGISTRY)/search-service:$(GIT_SHA) .
+
+push-ci-search-service:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+	docker push $(REGISTRY)/search-service:$(GIT_SHA)
+
+release-ci-search-service: build-ci-search-service push-ci-search-service
+
+# transcode-service
+.PHONY: build-ci-transcode-service push-ci-transcode-service release-ci-transcode-service
+build-ci-transcode-service:
+	docker build -f docker/transcode-service.Dockerfile -t $(REGISTRY)/transcode-service:$(GIT_SHA) .
+
+push-ci-transcode-service:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+	docker push $(REGISTRY)/transcode-service:$(GIT_SHA)
+
+release-ci-transcode-service: build-ci-transcode-service push-ci-transcode-service
+
+# frontend
+.PHONY: build-ci-frontend push-ci-frontend release-ci-frontend
+build-ci-frontend:
+	docker build -f src/frontend/Dockerfile -t $(REGISTRY)/frontend:$(GIT_SHA) src/frontend
+
+push-ci-frontend:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(REGISTRY)
+	docker push $(REGISTRY)/frontend:$(GIT_SHA)
+
+release-ci-frontend: build-ci-frontend push-ci-frontend
+
+# rollups
+.PHONY: build-ci-all push-ci-all release-ci-all
+build-ci-all: build-ci-api-gateway build-ci-assets-service build-ci-files-service build-ci-search-service build-ci-transcode-service build-ci-frontend
+push-ci-all:  push-ci-api-gateway  push-ci-assets-service  push-ci-files-service  push-ci-search-service  push-ci-transcode-service push-ci-frontend
+release-ci-all: release-ci-api-gateway release-ci-assets-service release-ci-files-service release-ci-search-service release-ci-transcode-service release-ci-frontend
 
 # Docker commands
 docker-build:
@@ -158,4 +236,4 @@ search-logs:
 
 gateway-logs:
 	@echo "API Gateway logs..."
-	tail -f src/api-gateway/app.log 2>/dev/null || echo "No log file found" 
+	tail -f src/api-gateway/app.log 2>/dev/null || echo "No log file found"
