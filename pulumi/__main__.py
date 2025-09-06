@@ -270,6 +270,118 @@ helm = kubernetes.helm.v3.Release(
     opts=pulumi.ResourceOptions(provider=provider),
 )
 
+####################
+### external dns ###
+####################
+
+edns_namespace = 'kube-system'
+edns_service_account = 'external-dns'
+edns_service_account_full = (
+    f'system:serviceaccount:{edns_namespace}:{edns_service_account}'
+)
+
+# iam role for external-dns service account
+edns_iam_role = aws.iam.Role(
+    'externaldns-iam-role',
+    assume_role_policy=pulumi.Output.all(oidc_arn, oidc_url).apply(
+        lambda args: json.dumps(
+            {
+                'Version': '2012-10-17',
+                'Statement': [
+                    {
+                        'Effect': 'Allow',
+                        'Principal': {'Federated': args[0]},
+                        'Action': 'sts:AssumeRoleWithWebIdentity',
+                        'Condition': {
+                            'StringEquals': {
+                                f'{args[1]}:sub': edns_service_account_full
+                            },
+                        },
+                    }
+                ],
+            }
+        )
+    ),
+)
+
+# iam policy limited to your delegated hosted zone
+edns_policy_doc = aws.iam.get_policy_document(
+    statements=[
+        aws.iam.GetPolicyDocumentStatementArgs(
+            effect='Allow',
+            actions=['route53:ChangeResourceRecordSets'],
+            resources=[f'arn:aws:route53:::hostedzone/{zone.zone_id}'],
+        ),
+        aws.iam.GetPolicyDocumentStatementArgs(
+            effect='Allow',
+            actions=[
+                'route53:ListHostedZones',
+                'route53:ListResourceRecordSets',
+                'route53:GetHostedZone',
+                'route53:ListTagsForResource',
+            ],
+            resources=['*'],
+        ),
+    ]
+).json
+
+edns_iam_policy = aws.iam.Policy(
+    'externaldns-iam-policy',
+    name='ExternalDNSIAMPolicy',
+    policy=edns_policy_doc,
+    opts=pulumi.ResourceOptions(parent=edns_iam_role),
+)
+
+aws.iam.PolicyAttachment(
+    'externaldns-attachment',
+    policy_arn=edns_iam_policy.arn,
+    roles=[edns_iam_role.name],
+    opts=pulumi.ResourceOptions(parent=edns_iam_role),
+)
+
+edns_k8s_service_account = kubernetes.core.v1.ServiceAccount(
+    'externaldns-service-account',
+    metadata={
+        'name': edns_service_account,
+        'namespace': edns_namespace,
+        'annotations': {
+            'eks.amazonaws.com/role-arn': edns_iam_role.arn.apply(lambda arn: arn)
+        },
+    },
+    opts=pulumi.ResourceOptions(provider=provider),
+)
+
+# helm deploy external-dns
+edns_helm = kubernetes.helm.v3.Release(
+    'external-dns',
+    kubernetes.helm.v3.ReleaseArgs(
+        name='external-dns',
+        chart='external-dns',
+        version='1.14.5',
+        repository_opts=kubernetes.helm.v3.RepositoryOptsArgs(
+            repo='https://kubernetes-sigs.github.io/external-dns/',
+        ),
+        namespace=edns_namespace,
+        create_namespace=False,
+        values={
+            'provider': 'aws',
+            'policy': 'upsert-only',
+            'registry': 'txt',
+            'txtOwnerId': 'mini-mam-externaldns',
+            'domainFilters': [delegated_subdomain],
+            'aws': {'zoneType': 'public'},
+            'sources': ['ingress'],
+            'serviceAccount': {
+                'create': False,
+                'name': edns_service_account,
+            },
+        },
+    ),
+    opts=pulumi.ResourceOptions(
+        provider=provider, depends_on=[edns_k8s_service_account]
+    ),
+)
+
 ###############
 ### exports ###
 ###############
