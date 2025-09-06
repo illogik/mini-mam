@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+    spec:
+      containers:
+        - name: search-service
+          image: 079059455431.dkr.ecr.us-east-1.amazonaws.com/search-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8004
+            - containerPort: 9093
+          env:
+            - name: FLASK_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FLASK_ENV
+            - name: SEARCH_SERVICE_PORT
+              value: "8004"
+            - name: SEARCH_SERVICE_METRICS_PORT
+              value: "9093"
+            - name: PROMETHEUS_MULTIPROC_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: PROMETHEUS_MULTIPROC_DIR
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: SECRET_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+spec:
+  selector:
+    app: search-service
+  ports:
+    - name: http
+      port: 8004
+      targetPort: 8004
+    - name: metrics
+      port: 9093
+      targetPort: 9093
+  type: ClusterIP

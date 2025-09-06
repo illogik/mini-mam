@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transcode-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transcode-service
+  template:
+    metadata:
+      labels:
+        app: transcode-service
+    spec:
+      containers:
+        - name: transcode-service
+          image: 079059455431.dkr.ecr.us-east-1.amazonaws.com/transcode-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8003
+            - containerPort: 9094
+          env:
+            - name: FLASK_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FLASK_ENV
+            - name: TRANSCODE_SERVICE_PORT
+              value: "8003"
+            - name: TRANSCODE_SERVICE_METRICS_PORT
+              value: "9094"
+            - name: PROMETHEUS_MULTIPROC_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: PROMETHEUS_MULTIPROC_DIR
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: SECRET_KEY
+            - name: OUTPUT_FOLDER
+              value: /app/transcoded
+            - name: TEMP_FOLDER
+              value: /app/temp
+          volumeMounts:
+            - name: transcode-output
+              mountPath: /app/transcoded
+            - name: transcode-temp
+              mountPath: /app/temp
+      volumes:
+        - name: transcode-output
+          emptyDir: {}
+        - name: transcode-temp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transcode-service
+spec:
+  selector:
+    app: transcode-service
+  ports:
+    - name: http
+      port: 8003
+      targetPort: 8003
+    - name: metrics
+      port: 9094
+      targetPort: 9094
+  type: ClusterIP

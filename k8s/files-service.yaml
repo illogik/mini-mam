@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: files-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: files-service
+  template:
+    metadata:
+      labels:
+        app: files-service
+    spec:
+      containers:
+        - name: files-service
+          image: 079059455431.dkr.ecr.us-east-1.amazonaws.com/files-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8002
+            - containerPort: 9092
+          env:
+            - name: FLASK_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FLASK_ENV
+            - name: FILES_SERVICE_PORT
+              value: "8002"
+            - name: FILES_SERVICE_METRICS_PORT
+              value: "9092"
+            - name: PROMETHEUS_MULTIPROC_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: PROMETHEUS_MULTIPROC_DIR
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: SECRET_KEY
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            - name: S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: S3_BUCKET
+            - name: S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: S3_REGION
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: S3_ACCESS_KEY
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: S3_SECRET_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: files-service
+spec:
+  selector:
+    app: files-service
+  ports:
+    - name: http
+      port: 8002
+      targetPort: 8002
+    - name: metrics
+      port: 9092
+      targetPort: 9092
+  type: ClusterIP
