@@ -2,6 +2,7 @@ AWS_REGION?=us-east-1
 ACCOUNT_ID?=079059455431
 GIT_SHA?=$(shell git rev-parse --short HEAD 2>/dev/null || echo 0.1)
 REGISTRY?=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
+TARGET_PLATFORM?=linux/amd64
 
 # Flask Microservice Framework Makefile
 
@@ -77,7 +78,7 @@ ecr-login:
 # api-gateway
 .PHONY: build-ci-api-gateway push-ci-api-gateway release-ci-api-gateway
 build-ci-api-gateway:
-	docker build -f docker/api-gateway.Dockerfile -t $(REGISTRY)/api-gateway:$(GIT_SHA) .
+	docker build --platform=$(TARGET_PLATFORM) -f docker/api-gateway.Dockerfile -t $(REGISTRY)/api-gateway:$(GIT_SHA) .
 
 push-ci-api-gateway: ecr-login
 	docker push $(REGISTRY)/api-gateway:$(GIT_SHA)
@@ -87,7 +88,7 @@ release-ci-api-gateway: build-ci-api-gateway push-ci-api-gateway
 # assets-service
 .PHONY: build-ci-assets-service push-ci-assets-service release-ci-assets-service
 build-ci-assets-service:
-	docker build -f docker/assets-service.Dockerfile -t $(REGISTRY)/assets-service:$(GIT_SHA) .
+	docker build --platform=$(TARGET_PLATFORM) -f docker/assets-service.Dockerfile -t $(REGISTRY)/assets-service:$(GIT_SHA) .
 
 push-ci-assets-service: ecr-login
 	docker push $(REGISTRY)/assets-service:$(GIT_SHA)
@@ -97,7 +98,7 @@ release-ci-assets-service: build-ci-assets-service push-ci-assets-service
 # files-service
 .PHONY: build-ci-files-service push-ci-files-service release-ci-files-service
 build-ci-files-service:
-	docker build -f docker/files-service.Dockerfile -t $(REGISTRY)/files-service:$(GIT_SHA) .
+	docker build --platform=$(TARGET_PLATFORM) -f docker/files-service.Dockerfile -t $(REGISTRY)/files-service:$(GIT_SHA) .
 
 push-ci-files-service: ecr-login
 	docker push $(REGISTRY)/files-service:$(GIT_SHA)
@@ -107,7 +108,7 @@ release-ci-files-service: build-ci-files-service push-ci-files-service
 # search-service
 .PHONY: build-ci-search-service push-ci-search-service release-ci-search-service
 build-ci-search-service:
-	docker build -f docker/search-service.Dockerfile -t $(REGISTRY)/search-service:$(GIT_SHA) .
+	docker build --platform=$(TARGET_PLATFORM) -f docker/search-service.Dockerfile -t $(REGISTRY)/search-service:$(GIT_SHA) .
 
 push-ci-search-service: ecr-login
 	docker push $(REGISTRY)/search-service:$(GIT_SHA)
@@ -117,7 +118,7 @@ release-ci-search-service: build-ci-search-service push-ci-search-service
 # transcode-service
 .PHONY: build-ci-transcode-service push-ci-transcode-service release-ci-transcode-service
 build-ci-transcode-service:
-	docker build -f docker/transcode-service.Dockerfile -t $(REGISTRY)/transcode-service:$(GIT_SHA) .
+	docker build --platform=$(TARGET_PLATFORM) -f docker/transcode-service.Dockerfile -t $(REGISTRY)/transcode-service:$(GIT_SHA) .
 
 push-ci-transcode-service: ecr-login
 	docker push $(REGISTRY)/transcode-service:$(GIT_SHA)
@@ -127,7 +128,7 @@ release-ci-transcode-service: build-ci-transcode-service push-ci-transcode-servi
 # frontend
 .PHONY: build-ci-frontend push-ci-frontend release-ci-frontend
 build-ci-frontend:
-	docker build -f src/frontend/Dockerfile -t $(REGISTRY)/frontend:$(GIT_SHA) src/frontend
+	docker build --platform=$(TARGET_PLATFORM) -f src/frontend/Dockerfile -t $(REGISTRY)/frontend:$(GIT_SHA) src/frontend
 
 push-ci-frontend: ecr-login
 	docker push $(REGISTRY)/frontend:$(GIT_SHA)
