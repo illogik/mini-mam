@@ -197,7 +197,7 @@ albc_service_account_full = (
 oidc_arn = eks_cluster.core.oidc_provider.arn
 oidc_url = eks_cluster.core.oidc_provider.url
 
-# iam role for lb controller service account
+# iam role for albc service account
 albc_iam_role = aws.iam.Role(
     'albc-iam-role',
     assume_role_policy=pulumi.Output.all(oidc_arn, oidc_url).apply(
@@ -290,7 +290,7 @@ edns_service_account_full = (
     f'system:serviceaccount:{edns_namespace}:{edns_service_account}'
 )
 
-# iam role for external-dns service account
+# iam role for edns service account
 edns_iam_role = aws.iam.Role(
     'externaldns-iam-role',
     assume_role_policy=pulumi.Output.all(oidc_arn, oidc_url).apply(
@@ -314,7 +314,7 @@ edns_iam_role = aws.iam.Role(
     ),
 )
 
-# iam policy limited to your delegated hosted zone
+# create iam policy
 edns_policy_doc = aws.iam.get_policy_document(
     statements=[
         aws.iam.GetPolicyDocumentStatementArgs(
@@ -342,6 +342,7 @@ edns_iam_policy = aws.iam.Policy(
     opts=pulumi.ResourceOptions(parent=edns_iam_role),
 )
 
+# attach iam policy to iam role
 aws.iam.PolicyAttachment(
     'externaldns-attachment',
     policy_arn=edns_iam_policy.arn,
@@ -349,6 +350,7 @@ aws.iam.PolicyAttachment(
     opts=pulumi.ResourceOptions(parent=edns_iam_role),
 )
 
+# create k8s service account
 edns_k8s_service_account = kubernetes.core.v1.ServiceAccount(
     'externaldns-service-account',
     metadata={
@@ -361,7 +363,7 @@ edns_k8s_service_account = kubernetes.core.v1.ServiceAccount(
     opts=pulumi.ResourceOptions(provider=provider),
 )
 
-# helm deploy external-dns
+# helm deploy
 edns_helm = kubernetes.helm.v3.Release(
     'external-dns',
     kubernetes.helm.v3.ReleaseArgs(
