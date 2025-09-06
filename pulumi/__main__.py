@@ -138,6 +138,27 @@ rds_subnets = aws.rds.SubnetGroup(
     subnet_ids=eks_vpc.private_subnet_ids,
 )
 
+rds_sg = aws.ec2.SecurityGroup(
+    'rds-sg',
+    vpc_id=eks_vpc.vpc_id,
+    description='Allow Postgres from EKS VPC',
+    egress=[
+        aws.ec2.SecurityGroupEgressArgs(
+            protocol='-1', from_port=0, to_port=0, cidr_blocks=['0.0.0.0/0']
+        )
+    ],
+)
+
+aws.ec2.SecurityGroupRule(
+    'rds-ingress-from-vpc',
+    type='ingress',
+    security_group_id=rds_sg.id,
+    protocol='tcp',
+    from_port=5432,
+    to_port=5432,
+    cidr_blocks=[vpc_network_cidr],
+)
+
 rds_mini_mam = aws.rds.Instance(
     'mini-mam',
     allocated_storage=20,
@@ -149,6 +170,8 @@ rds_mini_mam = aws.rds.Instance(
     username=db_user,
     password=db_pass,
     db_subnet_group_name=rds_subnets.name,
+    vpc_security_group_ids=[rds_sg.id],
+    publicly_accessible=False,
     skip_final_snapshot=True,
 )
 
@@ -251,7 +274,8 @@ helm = kubernetes.helm.v3.Release(
 ### exports ###
 ###############
 
-pulumi.export('appFqdn', fqdn)
-pulumi.export('certificateArn', validated_cert.certificate_arn)
+pulumi.export('app_fqdn', fqdn)
+pulumi.export('certificatearn', validated_cert.certificate_arn)
 pulumi.export('kubeconfig', eks_cluster.kubeconfig)
+pulumi.export('rds_endpoint', rds_mini_mam.address)
 pulumi.export('repo_urls', {name: repo.url for name, repo in ecr_repos.items()})
