@@ -175,13 +175,25 @@ rds_mini_mam = aws.rds.Instance(
     skip_final_snapshot=True,
 )
 
+#################
+### k8s setup ###
+#################
+
+provider = kubernetes.Provider(
+    'provider',
+    kubeconfig=eks_cluster.kubeconfig_json,
+    opts=pulumi.ResourceOptions(depends_on=[eks_cluster]),
+)
+
 ####################################
 ### aws load balancer controller ###
 ####################################
 
 albc_namespace = 'kube-system'
-service_account_name = 'aws-load-balancer-controller'
-service_account_full = f'system:serviceaccount:{albc_namespace}:{service_account_name}'
+albc_service_account = 'aws-load-balancer-controller'
+albc_service_account_full = (
+    f'system:serviceaccount:{albc_namespace}:{albc_service_account}'
+)
 oidc_arn = eks_cluster.core.oidc_provider.arn
 oidc_url = eks_cluster.core.oidc_provider.url
 
@@ -200,7 +212,9 @@ albc_iam_role = aws.iam.Role(
                         },
                         'Action': 'sts:AssumeRoleWithWebIdentity',
                         'Condition': {
-                            'StringEquals': {f'{args[1]}:sub': service_account_full},
+                            'StringEquals': {
+                                f'{args[1]}:sub': albc_service_account_full
+                            },
                         },
                     }
                 ],
@@ -229,16 +243,10 @@ aws.iam.PolicyAttachment(
 )
 
 # create k8s service account
-provider = kubernetes.Provider(
-    'provider',
-    kubeconfig=eks_cluster.kubeconfig_json,
-    opts=pulumi.ResourceOptions(depends_on=[eks_cluster]),
-)
-
-albc_service_account = kubernetes.core.v1.ServiceAccount(
+albc_k8s_service_account = kubernetes.core.v1.ServiceAccount(
     'albc-service-account',
     metadata={
-        'name': service_account_name,
+        'name': albc_service_account,
         'namespace': albc_namespace,
         'annotations': {
             'eks.amazonaws.com/role-arn': albc_iam_role.arn.apply(lambda arn: arn)
@@ -248,7 +256,7 @@ albc_service_account = kubernetes.core.v1.ServiceAccount(
 )
 
 # helm deploy
-helm = kubernetes.helm.v3.Release(
+albc_helm = kubernetes.helm.v3.Release(
     'aws-load-balancer-controller',
     kubernetes.helm.v3.ReleaseArgs(
         name='aws-load-balancer-controller',
@@ -257,17 +265,19 @@ helm = kubernetes.helm.v3.Release(
         repository_opts=kubernetes.helm.v3.RepositoryOptsArgs(
             repo='https://aws.github.io/eks-charts',
         ),
-        namespace='kube-system',  # your albc_namespace variable can go here
-        create_namespace=False,  # kube-system already exists
+        namespace=albc_namespace,
+        create_namespace=False,
         values={
             'clusterName': cluster_name,
             'serviceAccount': {
                 'create': False,
-                'name': service_account_name,
+                'name': albc_service_account,
             },
         },
     ),
-    opts=pulumi.ResourceOptions(provider=provider),
+    opts=pulumi.ResourceOptions(
+        provider=provider, depends_on=[albc_k8s_service_account]
+    ),
 )
 
 ####################
