@@ -29,6 +29,7 @@ aws_region = aws.config.region  # revisit
 
 # fqdn to use under delegated subdomain
 fqdn = f'mini-mam.{delegated_subdomain}'
+fqdn_full = f'https://{fqdn}'
 
 # look up the hosted zone in account
 zone = aws.route53.get_zone(name=delegated_subdomain, private_zone=False)
@@ -100,19 +101,31 @@ s3_file_service = aws.s3.Bucket(
     bucket='mini-mam-file-service',
 )
 
+s3_file_service_cors = aws.s3.BucketCorsConfiguration(
+    'mini-mam-file-service-cors',
+    bucket=s3_file_service.id,
+    cors_rules=[
+        {
+            'allowed_origins': [fqdn_full],
+            'allowed_methods': ['GET', 'PUT', 'HEAD'],
+            'allowed_headers': ['*'],
+            'expose_headers': ['ETag'],
+            'max_age_seconds': 3000,
+        }
+    ],
+)
+
 fs_iam_user = aws.iam.User('fs-iam-user', name='mini-mam-file-service-user')
 
 fs_policy_doc = aws.iam.get_policy_document(
     statements=[
         aws.iam.GetPolicyDocumentStatementArgs(
             effect='Allow',
-            actions=['s3:ListBucket'],
-            resources=[s3_file_service.arn],
-        ),
-        aws.iam.GetPolicyDocumentStatementArgs(
-            effect='Allow',
-            actions=['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-            resources=[pulumi.Output.concat(s3_file_service.arn, '/*')],
+            actions=['s3:*'],
+            resources=[
+                s3_file_service.arn,
+                pulumi.Output.concat(s3_file_service.arn, '/*'),
+            ],
         ),
     ]
 )
@@ -484,3 +497,5 @@ pulumi.export('certificatearn', validated_cert.certificate_arn)
 pulumi.export('kubeconfig', eks_cluster.kubeconfig)
 pulumi.export('rds_endpoint', rds_mini_mam.address)
 pulumi.export('repo_urls', {name: repo.url for name, repo in ecr_repos.items()})
+pulumi.export('admin_password', mm_admin_password.result)
+pulumi.export('user_password', mm_user_password.result)
