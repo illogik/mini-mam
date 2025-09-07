@@ -22,7 +22,7 @@ spec:
             - containerPort: 3000
           env:
             - name: REACT_APP_API_URL
-              value: "https://mini-mam.iconik-work-test-acct-r4ei2.iconik.dev"
+              value: http://localhost:80
             - name: GENERATE_SOURCEMAP
               value: "false"
 ---
