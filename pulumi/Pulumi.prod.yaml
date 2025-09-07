@@ -2,7 +2,7 @@ config:
   aws:region: us-east-1
   aws:defaultTags:
     tags:
-      env: production
+      env: prod
       owner: sre
       service: mini-mam
   mini-mam:clusterName: mini-mam
