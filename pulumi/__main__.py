@@ -27,13 +27,13 @@ aws_region = aws.config.region  # revisit
 ### route 53 zone and acm certificate - dns validation ###
 ##########################################################
 
-# fqdn to use under your delegated subdomain
+# fqdn to use under delegated subdomain
 fqdn = f'mini-mam.{delegated_subdomain}'
 
 # look up the hosted zone in account
 zone = aws.route53.get_zone(name=delegated_subdomain, private_zone=False)
 
-# authorize amazons ca at your delegated subdomain apex
+# authorize amazons ca at delegated subdomain apex
 caa_amazon = aws.route53.Record(
     'delegated-caa-issue-amazon',
     zone_id=zone.zone_id,
@@ -44,7 +44,7 @@ caa_amazon = aws.route53.Record(
     allow_overwrite=True,
 )
 
-# request a public acm cert - do i need to specify region?
+# request a public acm cert
 cert = aws.acm.Certificate(
     'app-cert',
     domain_name=fqdn,
@@ -175,9 +175,9 @@ rds_mini_mam = aws.rds.Instance(
     skip_final_snapshot=True,
 )
 
-#################
-### k8s setup ###
-#################
+###########
+### k8s ###
+###########
 
 provider = kubernetes.Provider(
     'provider',
@@ -197,7 +197,7 @@ albc_service_account_full = (
 oidc_arn = eks_cluster.core.oidc_provider.arn
 oidc_url = eks_cluster.core.oidc_provider.url
 
-# iam role for albc service account
+# iam role for service account
 albc_iam_role = aws.iam.Role(
     'albc-iam-role',
     assume_role_policy=pulumi.Output.all(oidc_arn, oidc_url).apply(
@@ -223,8 +223,8 @@ albc_iam_role = aws.iam.Role(
     ),
 )
 
-# create iam policy
-with open('files/iam_policy.json') as policy_file:
+# iam policy
+with open('files/albc_iam_policy.json') as policy_file:
     albc_policy_doc = policy_file.read()
 
 albc_iam_policy = aws.iam.Policy(
@@ -242,7 +242,7 @@ aws.iam.PolicyAttachment(
     opts=pulumi.ResourceOptions(parent=albc_iam_role),
 )
 
-# create k8s service account
+# k8s service account
 albc_k8s_service_account = kubernetes.core.v1.ServiceAccount(
     'albc-service-account',
     metadata={
@@ -290,7 +290,7 @@ edns_service_account_full = (
     f'system:serviceaccount:{edns_namespace}:{edns_service_account}'
 )
 
-# iam role for edns service account
+# iam role for service account
 edns_iam_role = aws.iam.Role(
     'externaldns-iam-role',
     assume_role_policy=pulumi.Output.all(oidc_arn, oidc_url).apply(
@@ -314,7 +314,7 @@ edns_iam_role = aws.iam.Role(
     ),
 )
 
-# create iam policy
+# iam policy
 edns_policy_doc = aws.iam.get_policy_document(
     statements=[
         aws.iam.GetPolicyDocumentStatementArgs(
@@ -350,7 +350,7 @@ aws.iam.PolicyAttachment(
     opts=pulumi.ResourceOptions(parent=edns_iam_role),
 )
 
-# create k8s service account
+# k8s service account
 edns_k8s_service_account = kubernetes.core.v1.ServiceAccount(
     'externaldns-service-account',
     metadata={
