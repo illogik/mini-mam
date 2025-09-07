@@ -248,9 +248,9 @@ mm_k8s_app_secrets = kubernetes.core.v1.Secret(
     type='Opaque',
     string_data={
         'ADMIN_PASSWORD': mm_admin_password.result,
-        'DB_PASSWORD': rds_mini_mam.password,
-        'DB_USER': rds_mini_mam.username,
         'JWT_SECRET_KEY': mm_jwt_secret.result,
+        'POSTGRES_PASSWORD': rds_mini_mam.password,
+        'POSTGRES_USER': rds_mini_mam.username,
         'S3_ACCESS_KEY': fs_access_key.id,
         'S3_SECRET_KEY': fs_access_key.secret,
         'SECRET_KEY': mm_flask_secret.result,
