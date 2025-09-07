@@ -4,6 +4,7 @@ import pulumi_aws as aws
 import pulumi_awsx as awsx
 import pulumi_eks as eks
 import pulumi_kubernetes as kubernetes
+import pulumi_random as random
 
 #####################
 ### config values ###
@@ -18,7 +19,6 @@ desired_cluster_size = config.get_int('desiredClusterSize')
 eks_node_instance_type = config.get('eksNodeInstanceType')
 vpc_network_cidr = config.get('vpcNetworkCidr')
 db_user = config.require('dbUsername')
-db_pass = config.require_secret('dbPassword')
 delegated_subdomain = config.require('delegatedSubdomain')
 
 aws_region = aws.config.region  # revisit
@@ -100,6 +100,34 @@ s3_file_service = aws.s3.Bucket(
     bucket='mini-mam-file-service',
 )
 
+fs_iam_user = aws.iam.User('fs-iam-user', name='mini-mam-file-service-user')
+
+fs_policy_doc = aws.iam.get_policy_document(
+    statements=[
+        aws.iam.GetPolicyDocumentStatementArgs(
+            effect='Allow',
+            actions=['s3:ListBucket'],
+            resources=[s3_file_service.arn],
+        ),
+        aws.iam.GetPolicyDocumentStatementArgs(
+            effect='Allow',
+            actions=['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+            resources=[pulumi.Output.concat(s3_file_service.arn, '/*')],
+        ),
+    ]
+)
+
+fs_iam_user_policy = aws.iam.UserPolicy(
+    'fs-iam-policy',
+    user=fs_iam_user.name,
+    policy=fs_policy_doc.json,
+)
+
+fs_access_key = aws.iam.AccessKey(
+    'mini-mam-files-user-ak',
+    user=fs_iam_user.name,
+)
+
 ###########
 ### vpc ###
 ###########
@@ -132,6 +160,10 @@ eks_cluster = eks.Cluster(
 ###########
 ### rds ###
 ###########
+
+rds_password = random.RandomPassword(
+    'password', length=16, special=True, override_special='!#$%&*()-_=+[]{}<>:?'
+)
 
 rds_subnets = aws.rds.SubnetGroup(
     'mini-mam-rds-subnets',
@@ -168,7 +200,7 @@ rds_mini_mam = aws.rds.Instance(
     engine_version='15',
     instance_class=aws.rds.InstanceType.T3_MICRO,
     username=db_user,
-    password=db_pass,
+    password=rds_password.result,
     db_subnet_group_name=rds_subnets.name,
     vpc_security_group_ids=[rds_sg.id],
     publicly_accessible=False,
@@ -184,6 +216,56 @@ provider = kubernetes.Provider(
     kubeconfig=eks_cluster.kubeconfig_json,
     opts=pulumi.ResourceOptions(depends_on=[eks_cluster]),
 )
+
+# congfig map
+mm_k8s_app_config = kubernetes.core.v1.ConfigMap(
+    'mm-app-config',
+    metadata={'name': 'app-config', 'namespace': 'default'},
+    data={
+        'FLASK_ENV': pulumi.get_stack(),
+        'POSTGRES_HOST': rds_mini_mam.address,
+        'PROMETHEUS_MULTIPROC_DIR': '/tmp/prometheus_multiproc',
+        'POSTGRES_PORT': rds_mini_mam.port.apply(str),
+        'S3_BUCKET': s3_file_service.bucket,
+        'S3_REGION': aws_region,
+    },
+    opts=pulumi.ResourceOptions(provider=provider),
+)
+
+
+# secrets
+mm_flask_secret = random.RandomPassword('flask-secret', length=32, special=False)
+mm_jwt_secret = random.RandomPassword('jwt-secret', length=48, special=False)
+mm_admin_password = random.RandomPassword('admin-password', length=20, special=True)
+mm_user_password = random.RandomPassword('user-password', length=20, special=True)
+
+mm_k8s_app_secrets = kubernetes.core.v1.Secret(
+    'mm-app-secrets',
+    metadata={
+        'name': 'app-secrets',
+        'namespace': 'default',
+    },
+    type='Opaque',
+    string_data={
+        'ADMIN_PASSWORD': mm_admin_password.result,
+        'DB_PASSWORD': rds_mini_mam.password,
+        'DB_USER': rds_mini_mam.username,
+        'JWT_SECRET_KEY': mm_jwt_secret.result,
+        'S3_ACCESS_KEY': fs_access_key.id,
+        'S3_SECRET_KEY': fs_access_key.secret,
+        'SECRET_KEY': mm_flask_secret.result,
+        'USER_PASSWORD': mm_user_password.result,
+    },
+    opts=pulumi.ResourceOptions(provider=provider),
+)
+
+# # database init job
+# mm_init_db = kubernetes.yaml.ConfigFile(
+#     'mm-init-db',
+#     file='files/init-db.yaml',
+#     opts=pulumi.ResourceOptions(provider=provider),
+# )
+
 
 ####################################
 ### aws load balancer controller ###
@@ -333,12 +415,12 @@ edns_policy_doc = aws.iam.get_policy_document(
             resources=['*'],
         ),
     ]
-).json
+)
 
 edns_iam_policy = aws.iam.Policy(
     'externaldns-iam-policy',
     name='ExternalDNSIAMPolicy',
-    policy=edns_policy_doc,
+    policy=edns_policy_doc.json,
     opts=pulumi.ResourceOptions(parent=edns_iam_role),
 )
 
