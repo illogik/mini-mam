@@ -232,7 +232,6 @@ mm_k8s_app_config = kubernetes.core.v1.ConfigMap(
     opts=pulumi.ResourceOptions(provider=provider),
 )
 
-
 # secrets
 mm_flask_secret = random.RandomPassword('flask-secret', length=32, special=False)
 mm_jwt_secret = random.RandomPassword('jwt-secret', length=48, special=False)
@@ -259,12 +258,12 @@ mm_k8s_app_secrets = kubernetes.core.v1.Secret(
     opts=pulumi.ResourceOptions(provider=provider),
 )
 
-# # database init job
-# mm_init_db = kubernetes.yaml.ConfigFile(
-#     'mm-init-db',
-#     file='files/init-db.yaml',
-#     opts=pulumi.ResourceOptions(provider=provider),
-# )
+# database init job
+mm_init_db = kubernetes.yaml.ConfigFile(
+    'mm-init-db',
+    file='files/init-db.yaml',
+    opts=pulumi.ResourceOptions(provider=provider),
+)
 
 
 ####################################
