@@ -2,7 +2,7 @@ config:
   aws:region: us-east-1
   aws:defaultTags:
     tags:
-      env: production
+      env: prod
       owner: sre
       service: mini-mam
   mini-mam:clusterName: mini-mam
@@ -12,5 +12,4 @@ config:
   mini-mam:minClusterSize: "3"
   mini-mam:vpcNetworkCidr: 10.0.0.0/16
   mini-mam:dbUsername: placeholder123
-  mini-mam:dbPassword: placeholder123
   mini-mam:delegatedSubdomain: iconik-work-test-acct-r4ei2.iconik.dev
