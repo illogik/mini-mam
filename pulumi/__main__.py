@@ -240,6 +240,7 @@ mm_k8s_app_config = kubernetes.core.v1.ConfigMap(
         'PROMETHEUS_MULTIPROC_DIR': '/tmp/prometheus_multiproc',
         'POSTGRES_PORT': rds_mini_mam.port.apply(str),
         'S3_BUCKET': s3_file_service.bucket,
+        'S3_ENDPOINT_URL': 'https://s3.amazonaws.com',
         'S3_REGION': aws_region,
     },
     opts=pulumi.ResourceOptions(provider=provider),
