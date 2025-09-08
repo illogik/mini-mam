@@ -6,7 +6,7 @@
 - Build and deploy of services via Makefile
   - This was a manual step with the intention of implementing this in a ci/cd pipeline
 
-# Key changes to repo
+# Key Changes to Repo
 - Added ci build/push to the Makefile
 - Pulumi code stored in [pulumi](./pulumi)
 - K8s manifests stored in [k8s](./k8s)
@@ -16,3 +16,11 @@
 - Ingress deployment for the currently running app used hard coded values due to an issue I had with my pulumi resource. I think that a full redeployment would fix whatever the problem was so we can find out if we decide to redeploy.
 - Mini-mam download doesn't work - but it doesn't work on the demo installation either. It looked like this was an issue with the frontends download handler using a bare fetch which doesn't send the JWT.
 
+# Things I Could Have Done Better
+- Deployments
+  - Helm for templatization in a CI/CD pipeline (ECR repo and GIT SHA)
+- Autoscaling
+  - Deployments would request minimal resources and be accompanied by a HorizontalPodAutoscaler
+- Monitoring
+- Metrics
+  - Metrics ports already exposed
