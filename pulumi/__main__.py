@@ -240,7 +240,6 @@ mm_k8s_app_config = kubernetes.core.v1.ConfigMap(
         'PROMETHEUS_MULTIPROC_DIR': '/tmp/prometheus_multiproc',
         'POSTGRES_PORT': rds_mini_mam.port.apply(str),
         'S3_BUCKET': s3_file_service.bucket,
-        'S3_ENDPOINT_URL': 'https://s3.amazonaws.com',
         'S3_REGION': aws_region,
     },
     opts=pulumi.ResourceOptions(provider=provider),
@@ -278,7 +277,6 @@ mm_init_db = kubernetes.yaml.ConfigFile(
     file='files/init-db.yaml',
     opts=pulumi.ResourceOptions(provider=provider),
 )
-
 
 ####################################
 ### aws load balancer controller ###
@@ -488,6 +486,70 @@ edns_helm = kubernetes.helm.v3.Release(
         provider=provider, depends_on=[edns_k8s_service_account]
     ),
 )
+
+#############
+### ingess ##
+#############
+
+# ingress_annotations = {
+#     'kubernetes.io/ingress.class': 'alb',
+#     'alb.ingress.kubernetes.io/scheme': 'internet-facing',
+#     'alb.ingress.kubernetes.io/target-type': 'ip',
+#     'alb.ingress.kubernetes.io/listen-ports': '[{"HTTP":80,"HTTPS":443}]',
+#     'alb.ingress.kubernetes.io/ssl-redirect': '443',
+#     'alb.ingress.kubernetes.io/certificate-arn': validated_cert.certificate_arn,
+# }
+
+# mm_ingress = kubernetes.networking.v1.Ingress(
+#     'mm-ingress',
+#     metadata={
+#         'name': 'mini-mam',
+#         'namespace': 'default',
+#         'annotations': ingress_annotations,
+#     },
+#     spec={
+#         'rules': [
+#             {
+#                 'host': fqdn,
+#                 'http': {
+#                     'paths': [
+#                         {
+#                             'path': '/auth',
+#                             'pathType': 'Prefix',
+#                             'backend': {
+#                                 'service': {
+#                                     'name': 'api-gateway',
+#                                     'port': {'name': 'http'},
+#                                 }
+#                             },
+#                         },
+#                         {
+#                             'path': '/api',
+#                             'pathType': 'Prefix',
+#                             'backend': {
+#                                 'service': {
+#                                     'name': 'api-gateway',
+#                                     'port': {'name': 'http'},
+#                                 }
+#                             },
+#                         },
+#                         {
+#                             'path': '/',
+#                             'pathType': 'Prefix',
+#                             'backend': {
+#                                 'service': {
+#                                     'name': 'frontend',
+#                                     'port': {'name': 'http'},
+#                                 }
+#                             },
+#                         },
+#                     ]
+#                 },
+#             }
+#         ]
+#     },
+#     opts=pulumi.ResourceOptions(provider=provider, depends_on=[albc_helm, edns_helm]),
+# )
 
 ###############
 ### exports ###
