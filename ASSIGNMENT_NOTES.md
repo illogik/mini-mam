@@ -24,3 +24,5 @@
 - Monitoring
 - Metrics
   - Metrics ports already exposed
+- Tooling polish
+  - I used some qol tooling (asdf, direnv) without much explanation or automated setup for new contributors (make targets, etc.)
